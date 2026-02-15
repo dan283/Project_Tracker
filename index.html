@@ -8,7 +8,6 @@
     :root{
       /* Blender-ish */
       --bg:#1f1f1f;
-      --bg2:#262626;
       --panel:#2b2b2b;
       --panel2:#303030;
       --line: rgba(255,255,255,.09);
@@ -204,7 +203,6 @@
       flex: 0 0 auto;
     }
     .pmeta{ flex:1; min-width:0; }
-    .pname{ font-weight: 850; font-size: 13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .pbar{
       margin-top: 8px;
       height: 7px;
@@ -410,6 +408,9 @@
       font-size: 16px;
       line-height: 1.2;
       margin: 0 0 6px 0;
+      min-width: 0;
+      overflow:hidden;
+      text-overflow: ellipsis;
     }
     .metaLine{
       display:flex; align-items:center; gap: 8px; flex-wrap:wrap;
@@ -457,9 +458,7 @@
       box-shadow: 0 0 0 3px rgba(242,140,40,.18) inset;
       background: rgba(242,140,40,.08);
     }
-    .imgHero{
-      height: 220px;
-    }
+    .imgHero{ height: 220px; }
     .imgHero img{ width:100%; height:100%; object-fit:cover; display:block; }
     .dropHint{
       position:absolute;
@@ -543,6 +542,51 @@
       line-height: 1.35;
     }
 
+    /* Inline rename UI */
+    .iconBtn{
+      cursor:pointer;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.78);
+      padding: 6px 8px;
+      font-weight: 900;
+      line-height: 1;
+      user-select:none;
+      flex: 0 0 auto;
+    }
+    .iconBtn:hover{ filter: brightness(1.10); }
+    .iconBtn:active{ transform: translateY(1px); }
+    .nameRow{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      justify-content:space-between;
+    }
+    .pname{
+      font-weight: 850;
+      font-size: 13px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      min-width:0;
+      flex: 1 1 auto;
+    }
+    .editInput{
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(242,140,40,.45);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      padding: 8px 10px;
+      outline:none;
+      font-weight: 850;
+      min-width:0;
+    }
+    .editInput:focus{
+      box-shadow: 0 0 0 3px rgba(242,140,40,.18);
+    }
+
     /* Mobile: panels toggle */
     .mobileToggles{ display:none; gap: 8px; align-items:center; }
 
@@ -560,6 +604,7 @@
       .right.show{ display:flex; }
       .mobileToggles{ display:flex; }
       .pill input{ width: 140px; }
+      .thumbs{ grid-template-columns: repeat(4, 1fr); }
     }
   </style>
 </head>
@@ -673,7 +718,7 @@
 
 <script>
 (() => {
-  const STORAGE_KEY = "pt_v1_blender_orange";
+  const STORAGE_KEY = "pt_v2_blender_orange_rename";
 
   const STAGES = ["Concept","AI Model","3D Model","UV","Texture","Rig/Pose","Render"];
   const STATUS = ["Not Started","In Progress","Done"];
@@ -693,7 +738,6 @@
   function uid(prefix="id"){
     return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
   }
-
   function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 
   function placeholderSvg(label){
@@ -773,9 +817,15 @@
       state.data = defaultData();
     }
 
+    // selections
     if(!state.selectedProjectId){
       state.selectedProjectId = state.data.projects[0]?.id ?? null;
     }
+    // ensure selected project exists
+    if(state.selectedProjectId && !state.data.projects.find(p=>p.id===state.selectedProjectId)){
+      state.selectedProjectId = state.data.projects[0]?.id ?? null;
+    }
+
     const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
     state.selectedTaskId = firstTask?.id ?? state.data.tasks[0]?.id ?? null;
 
@@ -848,6 +898,30 @@
     renderDetail();
   }
 
+  function beginInlineEdit({ mountEl, initialValue, onSave, onCancel }){
+    const input = document.createElement("input");
+    input.className = "editInput";
+    input.value = initialValue ?? "";
+    input.setAttribute("aria-label", "Rename");
+
+    const finishSave = () => {
+      const v = input.value.trim();
+      if(v) onSave(v);
+      else onCancel?.();
+    };
+    const finishCancel = () => onCancel?.();
+
+    input.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") finishSave();
+      if(e.key === "Escape") finishCancel();
+    });
+    input.addEventListener("blur", () => finishSave());
+
+    mountEl.replaceChildren(input);
+    input.focus();
+    input.select();
+  }
+
   function renderProjects(){
     const list = el("projectsList");
     list.innerHTML = "";
@@ -860,10 +934,13 @@
       item.className = "projectItem" + (p.id===state.selectedProjectId ? " selected" : "");
       item.onclick = () => {
         state.selectedProjectId = p.id;
+
         const firstTask = state.data.tasks
           .filter(t => t.projectId === p.id)
           .sort((a,b)=>b.updatedAt-a.updatedAt)[0];
         if(firstTask) state.selectedTaskId = firstTask.id;
+        else state.selectedTaskId = null;
+
         renderAll();
         showPanel("mid");
       };
@@ -874,9 +951,40 @@
 
       const meta = document.createElement("div");
       meta.className = "pmeta";
+
+      // name row with rename button
+      const nameRow = document.createElement("div");
+      nameRow.className = "nameRow";
+
       const name = document.createElement("div");
       name.className = "pname";
       name.textContent = p.name;
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "iconBtn";
+      editBtn.type = "button";
+      editBtn.textContent = "✎";
+      editBtn.title = "Rename project";
+      editBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // select this project before rename (feels consistent)
+        state.selectedProjectId = p.id;
+
+        beginInlineEdit({
+          mountEl: nameRow,
+          initialValue: p.name,
+          onSave: (val) => {
+            p.name = val;
+            save();
+            renderAll();
+          },
+          onCancel: () => renderProjects()
+        });
+      };
+
+      nameRow.append(name, editBtn);
 
       const bar = document.createElement("div");
       bar.className = "pbar";
@@ -884,7 +992,7 @@
       fill.style.width = p.progress + "%";
       bar.appendChild(fill);
 
-      meta.appendChild(name);
+      meta.appendChild(nameRow);
       meta.appendChild(bar);
 
       const pct = document.createElement("div");
@@ -1044,7 +1152,6 @@
     const imgs = Array.from(files || []).filter(f => f && f.type && f.type.startsWith("image/"));
     if(imgs.length === 0) return;
 
-    // Add in the order selected/dropped (first becomes new hero)
     const dataUrls = [];
     for(const f of imgs){
       dataUrls.push(await fileToDataURL(f));
@@ -1093,7 +1200,13 @@
 
     root.innerHTML = `
       <div>
-        <div class="detailTitle">${escapeHtml(t.title)}</div>
+        <div class="row" style="align-items:flex-start; justify-content:space-between; flex-wrap:nowrap;">
+          <div id="taskTitleMount" style="flex:1; min-width:0;">
+            <div class="detailTitle" id="taskTitleText">${escapeHtml(t.title)}</div>
+          </div>
+          <button class="iconBtn" id="btnRenameTask" type="button" title="Rename task">✎</button>
+        </div>
+
         <div class="metaLine">
           <span class="pillSmall stage">${escapeHtml(t.stage)}</span>
           <span class="chip ${statusChipClass}">${escapeHtml(t.status)}</span>
@@ -1170,6 +1283,24 @@
       </div>
     `;
 
+    // rename task inline
+    el("btnRenameTask").onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const mount = el("taskTitleMount");
+      beginInlineEdit({
+        mountEl: mount,
+        initialValue: t.title,
+        onSave: (val) => {
+          t.title = val;
+          t.updatedAt = Date.now();
+          save();
+          renderAll();
+        },
+        onCancel: () => renderDetail()
+      });
+    };
+
     // thumbs
     const thumbsEl = el("thumbs");
     thumbsEl.innerHTML = "";
@@ -1193,8 +1324,7 @@
     });
 
     // drag/drop zone handlers
-    const dz = el("dropZone");
-    attachDropZoneHandlers(dz, t);
+    attachDropZoneHandlers(el("dropZone"), t);
 
     // files
     renderFilesList(t);
@@ -1231,7 +1361,7 @@
       renderAll();
     };
 
-    // image upload (MULTIPLE)
+    // image upload (multiple)
     el("imgUpload").onchange = async (e) => {
       const files = e.target.files;
       if(!files || !files.length) return;
@@ -1266,7 +1396,7 @@
       renderTasksQuick();
     };
 
-    // add comment: append to description
+    // add comment append
     el("btnAddComment").onclick = () => {
       const c = el("commentBox").value.trim();
       if(!c) return;
@@ -1341,13 +1471,14 @@
     });
   }
 
-  // Actions: new task, new project, delete project, duplicate, delete, export/import, reset
+  // Actions
   el("btnNewProject").onclick = () => {
     const name = prompt("Project name?");
     if(!name) return;
     const p = { id: uid("p"), name: name.trim(), progress: 0 };
     state.data.projects.unshift(p);
     state.selectedProjectId = p.id;
+    state.selectedTaskId = null;
     save();
     renderAll();
     showPanel("left");
@@ -1363,7 +1494,6 @@
     state.data.projects = state.data.projects.filter(p => p.id !== pid);
     state.data.tasks = state.data.tasks.filter(t => t.projectId !== pid);
 
-    // pick a new project/task
     state.selectedProjectId = state.data.projects[0]?.id || null;
     state.selectedTaskId =
       state.data.tasks.find(t => t.projectId === state.selectedProjectId)?.id
@@ -1457,7 +1587,9 @@
         state.data = json;
         save();
         state.selectedProjectId = state.data.projects[0]?.id || null;
-        state.selectedTaskId = state.data.tasks[0]?.id || null;
+        state.selectedTaskId = state.data.tasks.find(t=>t.projectId===state.selectedProjectId)?.id || state.data.tasks[0]?.id || null;
+        buildStatusFilters();
+        buildProjectScopeSelect();
         renderAll();
         alert("Imported!");
       }catch(e){
