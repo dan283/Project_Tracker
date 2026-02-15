@@ -41,7 +41,7 @@
         var(--bg);
     }
 
-    /* Scrollbars (WebKit: iOS Safari supports these) */
+    /* Scrollbars */
     *::-webkit-scrollbar{ width:10px; height:10px; }
     *::-webkit-scrollbar-track{ background: rgba(255,255,255,.04); border-radius: 999px; }
     *::-webkit-scrollbar-thumb{ background: rgba(242,140,40,.55); border-radius: 999px; border: 2px solid rgba(0,0,0,.25); }
@@ -126,9 +126,7 @@
     }
 
     /* Left */
-    .left{
-      display:flex; flex-direction:column;
-    }
+    .left{ display:flex; flex-direction:column; }
     .panelHead{
       padding: 12px 12px;
       display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -270,11 +268,7 @@
     .chip.todo{ border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: var(--muted); }
 
     /* Middle grid */
-    .middle{
-      display:flex;
-      flex-direction:column;
-      min-height:0;
-    }
+    .middle{ display:flex; flex-direction:column; min-height:0; }
     .middleTools{
       padding: 10px;
       border-bottom: 1px solid var(--line);
@@ -303,11 +297,7 @@
       color: rgba(255,220,185,.95);
     }
 
-    .gridScroll{
-      padding: 10px;
-      overflow:auto;
-      min-height:0;
-    }
+    .gridScroll{ padding: 10px; overflow:auto; min-height:0; }
     .cards{
       display:grid;
       grid-template-columns: repeat( auto-fill, minmax(230px, 1fr) );
@@ -455,14 +445,33 @@
       color: var(--muted);
     }
 
-    .imgHero{
+    .dropZone{
       border-radius: 14px;
-      overflow:hidden;
       border: 1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.18);
+      overflow:hidden;
+      position: relative;
+    }
+    .dropZone.dragover{
+      border-color: rgba(242,140,40,.70);
+      box-shadow: 0 0 0 3px rgba(242,140,40,.18) inset;
+      background: rgba(242,140,40,.08);
+    }
+    .imgHero{
       height: 220px;
     }
     .imgHero img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .dropHint{
+      position:absolute;
+      inset:auto 10px 10px 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.28);
+      color: rgba(255,255,255,.70);
+      font-size: 12px;
+      pointer-events:none;
+    }
 
     .thumbs{
       margin-top: 10px;
@@ -535,25 +544,15 @@
     }
 
     /* Mobile: panels toggle */
-    .mobileToggles{
-      display:none;
-      gap: 8px;
-      align-items:center;
-    }
+    .mobileToggles{ display:none; gap: 8px; align-items:center; }
 
     @media (max-width: 1100px){
-      .layout{
-        grid-template-columns: 320px 1fr;
-        grid-template-rows: auto;
-      }
+      .layout{ grid-template-columns: 320px 1fr; }
       .right{ display:none; }
       .right.show{ display:flex; grid-column: 1 / -1; height: 55vh; }
     }
     @media (max-width: 820px){
-      .layout{
-        grid-template-columns: 1fr;
-        height: auto;
-      }
+      .layout{ grid-template-columns: 1fr; height: auto; }
       .left, .middle, .right{ height: 65vh; }
       .left{ display:none; }
       .left.show{ display:flex; }
@@ -609,8 +608,9 @@
     <section class="panel left" id="leftPanel">
       <div class="panelHead">
         <div class="title">Workspace</div>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
           <button class="btn ghost" id="btnNewProject">+ Project</button>
+          <button class="btn danger" id="btnDeleteProject" title="Deletes selected project and all its tasks">Delete project</button>
         </div>
       </div>
 
@@ -711,7 +711,7 @@
   <rect width="100%" height="100%" fill="url(#g)"/>
   <rect x="36" y="36" width="828" height="448" rx="28" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.10)"/>
   <text x="70" y="120" font-family="ui-monospace, Menlo, Monaco" font-size="34" fill="rgba(255,255,255,0.55)">${txt}</text>
-  <text x="70" y="170" font-family="system-ui, -apple-system" font-size="22" fill="rgba(255,255,255,0.38)">Add an image per task (stored locally)</text>
+  <text x="70" y="170" font-family="system-ui, -apple-system" font-size="22" fill="rgba(255,255,255,0.38)">Drop or upload images per task</text>
   <circle cx="790" cy="140" r="46" fill="rgba(242,140,40,0.22)" stroke="rgba(242,140,40,0.30)"/>
   <path d="M772 140h36M790 122v36" stroke="${fg}" stroke-width="6" stroke-linecap="round"/>
 </svg>`;
@@ -773,14 +773,12 @@
       state.data = defaultData();
     }
 
-    // initial selection
     if(!state.selectedProjectId){
       state.selectedProjectId = state.data.projects[0]?.id ?? null;
     }
     const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
     state.selectedTaskId = firstTask?.id ?? state.data.tasks[0]?.id ?? null;
 
-    // init filters
     buildStatusFilters();
     buildProjectScopeSelect();
     renderAll();
@@ -822,7 +820,7 @@
     sel.onchange = () => {
       state.scope = sel.value;
       renderAll();
-      showPanel("mid"); // on mobile, keep user on grid
+      showPanel("mid");
     };
   }
 
@@ -862,13 +860,10 @@
       item.className = "projectItem" + (p.id===state.selectedProjectId ? " selected" : "");
       item.onclick = () => {
         state.selectedProjectId = p.id;
-
-        // pick a task inside this project
         const firstTask = state.data.tasks
           .filter(t => t.projectId === p.id)
           .sort((a,b)=>b.updatedAt-a.updatedAt)[0];
         if(firstTask) state.selectedTaskId = firstTask.id;
-
         renderAll();
         showPanel("mid");
       };
@@ -902,13 +897,9 @@
   }
 
   function taskMatchesFilters(t){
-    // scope
     if(state.scope === "selected" && t.projectId !== state.selectedProjectId) return false;
-
-    // status filter
     if(state.statusFilter !== "All" && t.status !== state.statusFilter) return false;
 
-    // search
     const q = (state.query || "").trim().toLowerCase();
     if(q){
       const hay = (t.title + " " + t.shortDesc + " " + t.stage).toLowerCase();
@@ -1049,6 +1040,42 @@
     return state.data.tasks.find(t => t.id === state.selectedTaskId) || null;
   }
 
+  async function addImagesToTask(task, files){
+    const imgs = Array.from(files || []).filter(f => f && f.type && f.type.startsWith("image/"));
+    if(imgs.length === 0) return;
+
+    // Add in the order selected/dropped (first becomes new hero)
+    const dataUrls = [];
+    for(const f of imgs){
+      dataUrls.push(await fileToDataURL(f));
+    }
+
+    task.images = task.images || [];
+    task.images = dataUrls.concat(task.images);
+    task.heroIndex = 0;
+    task.updatedAt = Date.now();
+    save();
+    renderAll();
+  }
+
+  function attachDropZoneHandlers(zoneEl, task){
+    if(!zoneEl || !task) return;
+
+    const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+
+    zoneEl.addEventListener("dragenter", (e)=>{ stop(e); zoneEl.classList.add("dragover"); });
+    zoneEl.addEventListener("dragover", (e)=>{ stop(e); zoneEl.classList.add("dragover"); });
+    zoneEl.addEventListener("dragleave", (e)=>{ stop(e); zoneEl.classList.remove("dragover"); });
+    zoneEl.addEventListener("drop", async (e)=>{
+      stop(e);
+      zoneEl.classList.remove("dragover");
+      const dt = e.dataTransfer;
+      if(dt && dt.files && dt.files.length){
+        await addImagesToTask(task, dt.files);
+      }
+    });
+  }
+
   function renderDetail(){
     const root = el("detail");
     const t = getSelectedTask();
@@ -1076,13 +1103,20 @@
 
         <div class="section" style="border-top:none; padding-top:0; margin-top:0;">
           <h3>Images</h3>
-          <div class="imgHero"><img id="heroImg" alt="" src="${heroUrl}"></div>
+
+          <div class="dropZone imgHero" id="dropZone">
+            <img id="heroImg" alt="" src="${heroUrl}">
+            <div class="dropHint">Drop images here (desktop) or use Upload • Multiple allowed</div>
+          </div>
+
           <div class="thumbs" id="thumbs"></div>
+
           <div class="row" style="margin-top:10px;">
-            <label class="btn ghost" for="imgUpload">+ Add image</label>
-            <input id="imgUpload" type="file" accept="image/*" style="display:none;" />
+            <label class="btn ghost" for="imgUpload">+ Upload images</label>
+            <input id="imgUpload" type="file" accept="image/*" multiple style="display:none;" />
             <button class="btn ghost" id="btnRemoveImg">Remove current</button>
           </div>
+
           <div style="margin-top:8px; color:var(--muted2); font-size:12px;">
             Images are stored <b>locally on this device</b> (GitHub Pages is static).
           </div>
@@ -1158,6 +1192,10 @@
       thumbsEl.appendChild(d);
     });
 
+    // drag/drop zone handlers
+    const dz = el("dropZone");
+    attachDropZoneHandlers(dz, t);
+
     // files
     renderFilesList(t);
 
@@ -1193,17 +1231,11 @@
       renderAll();
     };
 
-    // image upload
+    // image upload (MULTIPLE)
     el("imgUpload").onchange = async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if(!file) return;
-      const dataUrl = await fileToDataURL(file);
-      t.images = t.images || [];
-      t.images.unshift(dataUrl);
-      t.heroIndex = 0;
-      t.updatedAt = Date.now();
-      save();
-      renderAll();
+      const files = e.target.files;
+      if(!files || !files.length) return;
+      await addImagesToTask(t, files);
       e.target.value = "";
     };
 
@@ -1234,7 +1266,7 @@
       renderTasksQuick();
     };
 
-    // add comment: append to description for simplicity
+    // add comment: append to description
     el("btnAddComment").onclick = () => {
       const c = el("commentBox").value.trim();
       if(!c) return;
@@ -1309,7 +1341,7 @@
     });
   }
 
-  // Actions: new task, new project, duplicate, delete, export/import, reset
+  // Actions: new task, new project, delete project, duplicate, delete, export/import, reset
   el("btnNewProject").onclick = () => {
     const name = prompt("Project name?");
     if(!name) return;
@@ -1319,6 +1351,28 @@
     save();
     renderAll();
     showPanel("left");
+  };
+
+  el("btnDeleteProject").onclick = () => {
+    const pid = state.selectedProjectId;
+    const proj = state.data.projects.find(p => p.id === pid);
+    if(!proj) return alert("No project selected.");
+    const countTasks = state.data.tasks.filter(t => t.projectId === pid).length;
+    if(!confirm(`Delete project "${proj.name}" and its ${countTasks} task(s)?`)) return;
+
+    state.data.projects = state.data.projects.filter(p => p.id !== pid);
+    state.data.tasks = state.data.tasks.filter(t => t.projectId !== pid);
+
+    // pick a new project/task
+    state.selectedProjectId = state.data.projects[0]?.id || null;
+    state.selectedTaskId =
+      state.data.tasks.find(t => t.projectId === state.selectedProjectId)?.id
+      || state.data.tasks[0]?.id
+      || null;
+
+    save();
+    renderAll();
+    showPanel("mid");
   };
 
   el("btnNewTask").onclick = () => {
@@ -1369,8 +1423,10 @@
     if(!t) return;
     if(!confirm("Delete this task?")) return;
     state.data.tasks = state.data.tasks.filter(x => x.id !== t.id);
-    state.selectedTaskId = state.data.tasks.find(x => x.projectId === state.selectedProjectId)?.id
-      || state.data.tasks[0]?.id || null;
+    state.selectedTaskId =
+      state.data.tasks.find(x => x.projectId === state.selectedProjectId)?.id
+      || state.data.tasks[0]?.id
+      || null;
     save();
     renderAll();
   };
@@ -1400,7 +1456,6 @@
         if(!json.projects || !json.tasks) throw new Error("Invalid format");
         state.data = json;
         save();
-        // reset selections
         state.selectedProjectId = state.data.projects[0]?.id || null;
         state.selectedTaskId = state.data.tasks[0]?.id || null;
         renderAll();
@@ -1440,7 +1495,6 @@
     const mid = el("midPanel");
     const right = el("rightPanel");
 
-    // for wide screens do nothing
     if(window.matchMedia("(min-width: 821px)").matches) return;
 
     left.classList.remove("show");
@@ -1470,7 +1524,6 @@
 
   // Kickoff
   load();
-  // Default on mobile: show grid first
   showPanel("mid");
 })();
 </script>
