@@ -1,0 +1,1478 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Project Tracker</title>
+  <style>
+    :root{
+      /* Blender-ish */
+      --bg:#1f1f1f;
+      --bg2:#262626;
+      --panel:#2b2b2b;
+      --panel2:#303030;
+      --line: rgba(255,255,255,.09);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.62);
+      --muted2: rgba(255,255,255,.42);
+      --accent:#f28c28;
+      --accent2:#ffb25a;
+      --good:#3bd38a;
+      --warn:#ffcc66;
+      --bad:#ff6a6a;
+
+      --r:14px;
+      --r2:12px;
+      --shadow: 0 18px 55px rgba(0,0,0,.45);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(900px 520px at 12% 8%, rgba(242,140,40,.14), transparent 60%),
+        radial-gradient(800px 480px at 72% 10%, rgba(255,255,255,.06), transparent 62%),
+        radial-gradient(900px 600px at 40% 95%, rgba(242,140,40,.10), transparent 65%),
+        var(--bg);
+    }
+
+    /* Scrollbars (WebKit: iOS Safari supports these) */
+    *::-webkit-scrollbar{ width:10px; height:10px; }
+    *::-webkit-scrollbar-track{ background: rgba(255,255,255,.04); border-radius: 999px; }
+    *::-webkit-scrollbar-thumb{ background: rgba(242,140,40,.55); border-radius: 999px; border: 2px solid rgba(0,0,0,.25); }
+    *::-webkit-scrollbar-thumb:hover{ background: rgba(242,140,40,.75); }
+
+    header{
+      position: sticky; top:0; z-index:20;
+      background: linear-gradient(to bottom, rgba(31,31,31,.92), rgba(31,31,31,.72));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .wrap{ max-width: 1600px; margin:0 auto; padding: 14px 14px; }
+    .topbar{
+      display:flex; align-items:center; gap:10px;
+      justify-content: space-between;
+    }
+
+    .brand{ display:flex; align-items:center; gap:10px; min-width: 220px; }
+    .logo{
+      width:38px; height:38px; border-radius: 12px;
+      background: linear-gradient(135deg, rgba(242,140,40,.95), rgba(255,178,90,.75));
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 14px 34px rgba(242,140,40,.16);
+    }
+    .brand h1{ font-size:14px; margin:0; letter-spacing:.2px; }
+    .brand .sub{ font-size:12px; color: var(--muted2); margin-top:2px; }
+
+    .controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+    .pill{
+      display:flex; align-items:center; gap:10px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      border-radius: 999px;
+      min-height: 40px;
+    }
+    .pill input, .pill select{
+      width: 220px;
+      background: transparent;
+      border:none; outline:none;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .pill select{ width:auto; cursor:pointer; }
+    .btn{
+      cursor:pointer;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      padding: 10px 12px;
+      font-weight: 700;
+      color: var(--text);
+      background: linear-gradient(135deg, rgba(242,140,40,.28), rgba(255,255,255,.06));
+      transition: transform .08s ease, filter .15s ease;
+      user-select:none;
+    }
+    .btn:hover{ filter: brightness(1.08); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.ghost{
+      background: rgba(255,255,255,.04);
+      font-weight: 650;
+    }
+    .btn.danger{ background: rgba(255,106,106,.16); }
+
+    main{ padding: 14px; }
+    .layout{
+      max-width: 1600px;
+      margin: 0 auto;
+      display:grid;
+      grid-template-columns: 340px 1fr 420px;
+      gap: 12px;
+      align-items: start;
+      height: calc(100vh - 78px);
+    }
+    .panel{
+      height: 100%;
+      min-height: 0;
+      background: linear-gradient(to bottom, rgba(48,48,48,.92), rgba(43,43,43,.92));
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Left */
+    .left{
+      display:flex; flex-direction:column;
+    }
+    .panelHead{
+      padding: 12px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.02);
+    }
+    .panelHead .title{
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .35px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .panelBody{
+      padding: 10px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .stack{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      height:100%;
+      min-height:0;
+    }
+    .block{
+      background: rgba(0,0,0,.10);
+      border: 1px solid var(--line);
+      border-radius: var(--r2);
+      overflow:hidden;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .blockHead{
+      padding: 10px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+      display:flex; align-items:center; justify-content:space-between;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.02);
+    }
+    .blockScroll{
+      padding: 8px;
+      overflow:auto;
+      min-height:0;
+    }
+
+    .projectItem{
+      display:flex; gap:10px; align-items:flex-start;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      cursor:pointer;
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      margin-bottom:8px;
+    }
+    .projectItem:hover{ background: rgba(255,255,255,.05); }
+    .projectItem:active{ transform: translateY(1px); }
+    .projectItem.selected{
+      border-color: rgba(242,140,40,.75);
+      box-shadow: 0 0 0 2px rgba(242,140,40,.22) inset, 0 12px 24px rgba(242,140,40,.10);
+      background: rgba(242,140,40,.08);
+    }
+    .picon{
+      width: 34px; height:34px; border-radius: 12px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      display:grid; place-items:center;
+      font-family: var(--mono);
+      color: var(--muted);
+      flex: 0 0 auto;
+    }
+    .pmeta{ flex:1; min-width:0; }
+    .pname{ font-weight: 850; font-size: 13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pbar{
+      margin-top: 8px;
+      height: 7px;
+      background: rgba(255,255,255,.07);
+      border-radius: 999px;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .pbar > i{
+      display:block; height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(242,140,40,.95), rgba(255,178,90,.9));
+      border-radius: 999px;
+    }
+    .ppct{
+      font-size: 12px;
+      color: var(--muted2);
+      font-family: var(--mono);
+      flex: 0 0 auto;
+      padding-top: 2px;
+    }
+
+    .taskRow{
+      display:flex; gap:10px; align-items:center;
+      padding: 9px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      cursor:pointer;
+      margin-bottom:8px;
+    }
+    .taskRow.selected{
+      border-color: rgba(242,140,40,.75);
+      background: rgba(242,140,40,.07);
+      box-shadow: 0 0 0 2px rgba(242,140,40,.18) inset;
+    }
+    .thumbMini{
+      width: 38px; height: 30px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+      flex: 0 0 auto;
+    }
+    .thumbMini img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .tmeta{ flex:1; min-width:0; }
+    .ttitle{ font-weight: 800; font-size: 12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tstage{ font-size: 11px; color: var(--muted2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .chip{
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      font-weight: 800;
+      white-space:nowrap;
+    }
+    .chip.done{ border-color: rgba(59,211,138,.35); background: rgba(59,211,138,.14); color: rgba(200,255,230,.9); }
+    .chip.progress{ border-color: rgba(255,204,102,.35); background: rgba(255,204,102,.13); color: rgba(255,245,220,.92); }
+    .chip.todo{ border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: var(--muted); }
+
+    /* Middle grid */
+    .middle{
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .middleTools{
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      flex-wrap:wrap;
+    }
+    .chipsRow{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .filterChip{
+      cursor:pointer;
+      user-select:none;
+      font-size: 12px;
+      font-weight: 850;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+    }
+    .filterChip.active{
+      border-color: rgba(242,140,40,.65);
+      background: rgba(242,140,40,.14);
+      color: rgba(255,220,185,.95);
+    }
+
+    .gridScroll{
+      padding: 10px;
+      overflow:auto;
+      min-height:0;
+    }
+    .cards{
+      display:grid;
+      grid-template-columns: repeat( auto-fill, minmax(230px, 1fr) );
+      gap: 10px;
+    }
+    .card{
+      border-radius: var(--r2);
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      overflow:hidden;
+      cursor:pointer;
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      min-height: 280px;
+      display:flex;
+      flex-direction:column;
+    }
+    .card:hover{ background: rgba(255,255,255,.05); }
+    .card:active{ transform: translateY(1px); }
+    .card.selected{
+      border-color: rgba(242,140,40,.75);
+      box-shadow: 0 0 0 2px rgba(242,140,40,.18) inset, 0 12px 24px rgba(242,140,40,.10);
+      background: rgba(242,140,40,.06);
+    }
+    .cardHead{
+      padding: 10px 10px 8px 10px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap: 8px;
+    }
+    .stagePill{
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(242,140,40,.35);
+      background: rgba(242,140,40,.12);
+      color: rgba(255,220,185,.95);
+      max-width: 70%;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .statusDot{
+      width: 10px; height:10px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.18);
+      margin-top: 4px;
+      flex: 0 0 auto;
+    }
+    .statusDot.done{ background: rgba(59,211,138,.9); border-color: rgba(59,211,138,.45); }
+    .statusDot.progress{ background: rgba(255,204,102,.92); border-color: rgba(255,204,102,.45); }
+    .statusDot.todo{ background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.18); }
+
+    .cardTitle{
+      padding: 0 10px 8px 10px;
+      font-weight: 900;
+      font-size: 13.5px;
+      line-height: 1.2;
+      min-height: 34px;
+    }
+    .cardImg{
+      margin: 0 10px;
+      border-radius: 12px;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      height: 130px;
+      flex: 0 0 auto;
+    }
+    .cardImg img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .cardDesc{
+      padding: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow:hidden;
+      min-height: 38px;
+    }
+    .cardFoot{
+      margin-top:auto;
+      padding: 10px;
+      display:flex; align-items:center; justify-content:space-between; gap: 10px;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    .miniBar{
+      flex:1;
+      height: 7px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .miniBar > i{
+      display:block; height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(242,140,40,.95), rgba(255,178,90,.9));
+      border-radius: 999px;
+    }
+    .pctMini{
+      font-family: var(--mono);
+      color: var(--muted2);
+      font-size: 12px;
+      flex: 0 0 auto;
+    }
+
+    /* Right detail */
+    .right{ display:flex; flex-direction:column; min-height:0; }
+    .detailScroll{ padding: 12px; overflow:auto; min-height:0; }
+    .detailTitle{
+      font-weight: 950;
+      font-size: 16px;
+      line-height: 1.2;
+      margin: 0 0 6px 0;
+    }
+    .metaLine{
+      display:flex; align-items:center; gap: 8px; flex-wrap:wrap;
+      color: var(--muted2);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .pillSmall{
+      font-size: 11px;
+      font-weight: 900;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+    }
+    .pillSmall.stage{
+      border-color: rgba(242,140,40,.35);
+      background: rgba(242,140,40,.10);
+      color: rgba(255,220,185,.92);
+    }
+
+    .section{
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .section h3{
+      margin:0 0 8px 0;
+      font-size: 12px;
+      letter-spacing:.35px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .imgHero{
+      border-radius: 14px;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      height: 220px;
+    }
+    .imgHero img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+    .thumbs{
+      margin-top: 10px;
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+    .thumb{
+      border-radius: 12px;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      height: 64px;
+      cursor:pointer;
+    }
+    .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+    textarea{
+      width:100%;
+      min-height: 110px;
+      resize: vertical;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding: 10px 10px;
+      outline:none;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    textarea:focus{ box-shadow: 0 0 0 3px rgba(242,140,40,.18); border-color: rgba(242,140,40,.4); }
+
+    .row{
+      display:flex; gap: 10px; align-items:center; flex-wrap:wrap;
+    }
+    .row .btn{ padding: 9px 12px; }
+    .fileList{
+      display:flex; flex-direction:column; gap: 8px;
+    }
+    .fileItem{
+      display:flex; align-items:center; justify-content:space-between; gap: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+    }
+    .fileLeft{ display:flex; align-items:center; gap: 10px; min-width:0; }
+    .ficon{
+      width: 30px; height:30px; border-radius: 10px;
+      background: rgba(242,140,40,.14);
+      border: 1px solid rgba(242,140,40,.22);
+      display:grid; place-items:center;
+      font-family: var(--mono);
+      color: rgba(255,220,185,.9);
+      flex:0 0 auto;
+    }
+    .fname{ font-weight: 850; font-size: 12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .furl{ font-size: 12px; color: var(--muted2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 220px; }
+    a{ color: var(--accent2); text-decoration: none; }
+    a:hover{ text-decoration: underline; }
+
+    .empty{
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px dashed rgba(255,255,255,.16);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    /* Mobile: panels toggle */
+    .mobileToggles{
+      display:none;
+      gap: 8px;
+      align-items:center;
+    }
+
+    @media (max-width: 1100px){
+      .layout{
+        grid-template-columns: 320px 1fr;
+        grid-template-rows: auto;
+      }
+      .right{ display:none; }
+      .right.show{ display:flex; grid-column: 1 / -1; height: 55vh; }
+    }
+    @media (max-width: 820px){
+      .layout{
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .left, .middle, .right{ height: 65vh; }
+      .left{ display:none; }
+      .left.show{ display:flex; }
+      .right{ display:none; }
+      .right.show{ display:flex; }
+      .mobileToggles{ display:flex; }
+      .pill input{ width: 140px; }
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Project Tracker</h1>
+          <div class="sub">Projects → tasks → stages (cards) • device-local save</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="mobileToggles">
+          <button class="btn ghost" id="btnShowLeft">Projects</button>
+          <button class="btn ghost" id="btnShowMid">Grid</button>
+          <button class="btn ghost" id="btnShowRight">Details</button>
+        </div>
+
+        <div class="pill" title="Search tasks">
+          <span style="color:var(--muted2);font-weight:900;">⌕</span>
+          <input id="q" placeholder="Search tasks…" />
+        </div>
+
+        <div class="pill" title="Scope">
+          <span style="color:var(--muted2);font-weight:900;">Project</span>
+          <select id="projectScope"></select>
+        </div>
+
+        <button class="btn" id="btnNewTask">+ New Task</button>
+        <button class="btn ghost" id="btnExport">Export</button>
+        <button class="btn ghost" id="btnImport">Import</button>
+        <button class="btn danger" id="btnReset" title="Clears local data on this device">Reset</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="layout">
+    <!-- LEFT -->
+    <section class="panel left" id="leftPanel">
+      <div class="panelHead">
+        <div class="title">Workspace</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn ghost" id="btnNewProject">+ Project</button>
+        </div>
+      </div>
+
+      <div class="panelBody">
+        <div class="stack">
+          <div class="block" style="flex: 1 1 55%;">
+            <div class="blockHead">
+              <span>Projects</span>
+              <span style="font-family:var(--mono); color:var(--muted2);" id="projCount">0</span>
+            </div>
+            <div class="blockScroll" id="projectsList"></div>
+          </div>
+
+          <div class="block" style="flex: 1 1 45%;">
+            <div class="blockHead">
+              <span>Tasks (quick)</span>
+              <span style="font-family:var(--mono); color:var(--muted2);" id="taskCount">0</span>
+            </div>
+            <div class="blockScroll" id="tasksQuick"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MIDDLE -->
+    <section class="panel middle" id="midPanel">
+      <div class="middleTools">
+        <div class="chipsRow" id="statusFilters"></div>
+
+        <div class="pill" style="min-height:38px; padding:8px 10px;">
+          <span style="color:var(--muted2);font-weight:900;">Sort</span>
+          <select id="sortBy">
+            <option value="updated">Recently updated</option>
+            <option value="stage">Stage</option>
+            <option value="status">Status</option>
+            <option value="title">Title</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="gridScroll">
+        <div class="cards" id="cards"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="panel right" id="rightPanel">
+      <div class="panelHead">
+        <div class="title">Task details</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn ghost" id="btnDuplicate">Duplicate</button>
+          <button class="btn danger" id="btnDeleteTask">Delete</button>
+        </div>
+      </div>
+
+      <div class="detailScroll" id="detail"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  const STORAGE_KEY = "pt_v1_blender_orange";
+
+  const STAGES = ["Concept","AI Model","3D Model","UV","Texture","Rig/Pose","Render"];
+  const STATUS = ["Not Started","In Progress","Done"];
+
+  const el = (id) => document.getElementById(id);
+
+  const state = {
+    data: null,
+    selectedProjectId: null,
+    selectedTaskId: null,
+    statusFilter: "All",
+    sortBy: "updated",
+    query: "",
+    scope: "selected", // selected or all
+  };
+
+  function uid(prefix="id"){
+    return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+  }
+
+  function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+  function placeholderSvg(label){
+    const bg = "#1c1c1c";
+    const fg = "#f28c28";
+    const txt = encodeURIComponent(label);
+    const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="${bg}"/>
+      <stop offset="1" stop-color="#2b2b2b"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#g)"/>
+  <rect x="36" y="36" width="828" height="448" rx="28" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.10)"/>
+  <text x="70" y="120" font-family="ui-monospace, Menlo, Monaco" font-size="34" fill="rgba(255,255,255,0.55)">${txt}</text>
+  <text x="70" y="170" font-family="system-ui, -apple-system" font-size="22" fill="rgba(255,255,255,0.38)">Add an image per task (stored locally)</text>
+  <circle cx="790" cy="140" r="46" fill="rgba(242,140,40,0.22)" stroke="rgba(242,140,40,0.30)"/>
+  <path d="M772 140h36M790 122v36" stroke="${fg}" stroke-width="6" stroke-linecap="round"/>
+</svg>`;
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  function defaultData(){
+    const p1 = { id: uid("p"), name:"Fantasy Creature", progress: 38 };
+    const p2 = { id: uid("p"), name:"Fixelpuck Mascot", progress: 62 };
+    const p3 = { id: uid("p"), name:"Sci-Fi Prop Set", progress: 15 };
+
+    const now = Date.now();
+    const mkTask = (projectId, stage, title, shortDesc, status, progress, updatedAtOffset=0) => ({
+      id: uid("t"),
+      projectId,
+      stage,
+      title,
+      shortDesc,
+      status,
+      progress,
+      updatedAt: now - updatedAtOffset,
+      description: shortDesc + "\n\nNotes:\n- ",
+      images: [ placeholderSvg(stage) ],
+      files: [
+        { name: "Reference board", url: "https://example.com" }
+      ],
+      heroIndex: 0
+    });
+
+    const tasks = [
+      mkTask(p1.id,"Concept","Silhouette exploration","10 fast silhouettes, pick top 3.", "In Progress", 45, 1000*60*10),
+      mkTask(p1.id,"AI Model","Midjourney / SD pass","Generate 6 variants matching silhouette.", "Not Started", 0, 1000*60*60*2),
+      mkTask(p1.id,"3D Model","Base sculpt","Primary forms + proportions locked.", "In Progress", 30, 1000*60*30),
+      mkTask(p1.id,"UV","UV unwrap","Clean seams, consistent texel density.", "Not Started", 0, 1000*60*60*6),
+      mkTask(p1.id,"Texture","Handpaint / stylized","Material breakup + roughness pass.", "Not Started", 0, 1000*60*60*12),
+      mkTask(p1.id,"Rig/Pose","Simple rig + 3 poses","Deform check + facial controls.", "Not Started", 0, 1000*60*60*24),
+      mkTask(p1.id,"Render","Turntable render","Neutral studio, 3 angles + closeups.", "Not Started", 0, 1000*60*60*36),
+
+      mkTask(p2.id,"Concept","Logo + shape language","Blocky, cute, readable from far.", "Done", 100, 1000*60*60*72),
+      mkTask(p2.id,"3D Model","Clean topology pass","Animation friendly edgeflow.", "In Progress", 70, 1000*60*60*20),
+      mkTask(p2.id,"Render","Portfolio renders","Blender-style studio lighting.", "Not Started", 0, 1000*60*60*5),
+
+      mkTask(p3.id,"Concept","Prop list + refs","Collect 20 refs per prop.", "In Progress", 25, 1000*60*60*4),
+    ];
+
+    return { projects: [p1,p2,p3], tasks };
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw){
+        state.data = defaultData();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+      }else{
+        state.data = JSON.parse(raw);
+      }
+    }catch(e){
+      state.data = defaultData();
+    }
+
+    // initial selection
+    if(!state.selectedProjectId){
+      state.selectedProjectId = state.data.projects[0]?.id ?? null;
+    }
+    const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
+    state.selectedTaskId = firstTask?.id ?? state.data.tasks[0]?.id ?? null;
+
+    // init filters
+    buildStatusFilters();
+    buildProjectScopeSelect();
+    renderAll();
+  }
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+  }
+
+  function statusToChipClass(s){
+    if(s==="Done") return "done";
+    if(s==="In Progress") return "progress";
+    return "todo";
+  }
+  function statusToDotClass(s){
+    if(s==="Done") return "done";
+    if(s==="In Progress") return "progress";
+    return "todo";
+  }
+
+  function computeProjectProgress(projectId){
+    const tasks = state.data.tasks.filter(t => t.projectId === projectId);
+    if(tasks.length === 0) return 0;
+    const avg = tasks.reduce((a,t)=>a + (Number(t.progress)||0), 0) / tasks.length;
+    return Math.round(clamp(avg,0,100));
+  }
+
+  function buildProjectScopeSelect(){
+    const sel = el("projectScope");
+    sel.innerHTML = "";
+    const optSelected = document.createElement("option");
+    optSelected.value = "selected";
+    optSelected.textContent = "Selected project";
+    const optAll = document.createElement("option");
+    optAll.value = "all";
+    optAll.textContent = "All projects";
+    sel.append(optSelected, optAll);
+    sel.value = state.scope;
+    sel.onchange = () => {
+      state.scope = sel.value;
+      renderAll();
+      showPanel("mid"); // on mobile, keep user on grid
+    };
+  }
+
+  function buildStatusFilters(){
+    const wrap = el("statusFilters");
+    wrap.innerHTML = "";
+    const items = ["All", ...STATUS];
+    items.forEach(s => {
+      const b = document.createElement("div");
+      b.className = "filterChip" + (state.statusFilter===s ? " active" : "");
+      b.textContent = s;
+      b.onclick = () => {
+        state.statusFilter = s;
+        buildStatusFilters();
+        renderCards();
+      };
+      wrap.appendChild(b);
+    });
+  }
+
+  function renderAll(){
+    renderProjects();
+    renderTasksQuick();
+    renderCards();
+    renderDetail();
+  }
+
+  function renderProjects(){
+    const list = el("projectsList");
+    list.innerHTML = "";
+    el("projCount").textContent = String(state.data.projects.length);
+
+    state.data.projects.forEach((p, idx) => {
+      p.progress = computeProjectProgress(p.id);
+
+      const item = document.createElement("div");
+      item.className = "projectItem" + (p.id===state.selectedProjectId ? " selected" : "");
+      item.onclick = () => {
+        state.selectedProjectId = p.id;
+
+        // pick a task inside this project
+        const firstTask = state.data.tasks
+          .filter(t => t.projectId === p.id)
+          .sort((a,b)=>b.updatedAt-a.updatedAt)[0];
+        if(firstTask) state.selectedTaskId = firstTask.id;
+
+        renderAll();
+        showPanel("mid");
+      };
+
+      const icon = document.createElement("div");
+      icon.className = "picon";
+      icon.textContent = String(idx+1);
+
+      const meta = document.createElement("div");
+      meta.className = "pmeta";
+      const name = document.createElement("div");
+      name.className = "pname";
+      name.textContent = p.name;
+
+      const bar = document.createElement("div");
+      bar.className = "pbar";
+      const fill = document.createElement("i");
+      fill.style.width = p.progress + "%";
+      bar.appendChild(fill);
+
+      meta.appendChild(name);
+      meta.appendChild(bar);
+
+      const pct = document.createElement("div");
+      pct.className = "ppct";
+      pct.textContent = p.progress + "%";
+
+      item.append(icon, meta, pct);
+      list.appendChild(item);
+    });
+  }
+
+  function taskMatchesFilters(t){
+    // scope
+    if(state.scope === "selected" && t.projectId !== state.selectedProjectId) return false;
+
+    // status filter
+    if(state.statusFilter !== "All" && t.status !== state.statusFilter) return false;
+
+    // search
+    const q = (state.query || "").trim().toLowerCase();
+    if(q){
+      const hay = (t.title + " " + t.shortDesc + " " + t.stage).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }
+
+  function renderTasksQuick(){
+    const list = el("tasksQuick");
+    list.innerHTML = "";
+
+    const tasks = state.data.tasks
+      .filter(t => t.projectId === state.selectedProjectId)
+      .sort((a,b)=>b.updatedAt-a.updatedAt);
+
+    el("taskCount").textContent = String(tasks.length);
+
+    tasks.forEach(t => {
+      const row = document.createElement("div");
+      row.className = "taskRow" + (t.id===state.selectedTaskId ? " selected" : "");
+      row.onclick = () => {
+        state.selectedTaskId = t.id;
+        renderCards();
+        renderDetail();
+        showPanel("right");
+      };
+
+      const thumb = document.createElement("div");
+      thumb.className = "thumbMini";
+      const img = document.createElement("img");
+      img.alt = "";
+      img.src = (t.images && t.images[0]) ? t.images[0] : placeholderSvg(t.stage);
+      thumb.appendChild(img);
+
+      const meta = document.createElement("div");
+      meta.className = "tmeta";
+      const title = document.createElement("div");
+      title.className = "ttitle";
+      title.textContent = t.title;
+      const stage = document.createElement("div");
+      stage.className = "tstage";
+      stage.textContent = t.stage;
+      meta.append(title, stage);
+
+      const chip = document.createElement("div");
+      chip.className = "chip " + statusToChipClass(t.status);
+      chip.textContent = t.status;
+
+      row.append(thumb, meta, chip);
+      list.appendChild(row);
+    });
+  }
+
+  function sortedTasksForGrid(){
+    let tasks = state.data.tasks.filter(taskMatchesFilters);
+
+    const cmpStage = (a,b) => STAGES.indexOf(a.stage) - STAGES.indexOf(b.stage);
+    const cmpStatus = (a,b) => STATUS.indexOf(a.status) - STATUS.indexOf(b.status);
+    const cmpTitle = (a,b) => a.title.localeCompare(b.title);
+    const cmpUpdated = (a,b) => (b.updatedAt||0) - (a.updatedAt||0);
+
+    switch(state.sortBy){
+      case "stage": tasks.sort((a,b)=> cmpStage(a,b) || cmpUpdated(a,b)); break;
+      case "status": tasks.sort((a,b)=> cmpStatus(a,b) || cmpUpdated(a,b)); break;
+      case "title": tasks.sort((a,b)=> cmpTitle(a,b)); break;
+      default: tasks.sort(cmpUpdated);
+    }
+    return tasks;
+  }
+
+  function renderCards(){
+    const cards = el("cards");
+    cards.innerHTML = "";
+
+    const tasks = sortedTasksForGrid();
+
+    if(tasks.length === 0){
+      cards.innerHTML = `<div class="empty" style="grid-column: 1/-1;">
+        No tasks match your filters/search. Try clearing filters or switching scope.
+      </div>`;
+      return;
+    }
+
+    tasks.forEach(t => {
+      const card = document.createElement("div");
+      card.className = "card" + (t.id===state.selectedTaskId ? " selected" : "");
+      card.onclick = () => {
+        state.selectedTaskId = t.id;
+        renderTasksQuick();
+        renderCards();
+        renderDetail();
+        showPanel("right");
+      };
+
+      const head = document.createElement("div");
+      head.className = "cardHead";
+      const stage = document.createElement("div");
+      stage.className = "stagePill";
+      stage.textContent = t.stage;
+      const dot = document.createElement("div");
+      dot.className = "statusDot " + statusToDotClass(t.status);
+      head.append(stage, dot);
+
+      const title = document.createElement("div");
+      title.className = "cardTitle";
+      title.textContent = t.title;
+
+      const imgWrap = document.createElement("div");
+      imgWrap.className = "cardImg";
+      const img = document.createElement("img");
+      img.alt = "";
+      img.src = (t.images && t.images[0]) ? t.images[0] : placeholderSvg(t.stage);
+      imgWrap.appendChild(img);
+
+      const desc = document.createElement("div");
+      desc.className = "cardDesc";
+      desc.textContent = t.shortDesc || "";
+
+      const foot = document.createElement("div");
+      foot.className = "cardFoot";
+      const bar = document.createElement("div");
+      bar.className = "miniBar";
+      const fill = document.createElement("i");
+      fill.style.width = clamp(Number(t.progress)||0,0,100) + "%";
+      bar.appendChild(fill);
+      const pct = document.createElement("div");
+      pct.className = "pctMini";
+      pct.textContent = clamp(Number(t.progress)||0,0,100) + "%";
+      foot.append(bar, pct);
+
+      card.append(head, title, imgWrap, desc, foot);
+      cards.appendChild(card);
+    });
+  }
+
+  function getSelectedTask(){
+    return state.data.tasks.find(t => t.id === state.selectedTaskId) || null;
+  }
+
+  function renderDetail(){
+    const root = el("detail");
+    const t = getSelectedTask();
+
+    if(!t){
+      root.innerHTML = `<div class="empty">Select a task to see details.</div>`;
+      return;
+    }
+
+    const p = state.data.projects.find(p => p.id === t.projectId);
+
+    const statusChipClass = statusToChipClass(t.status);
+    const heroUrl = t.images?.[t.heroIndex||0] || placeholderSvg(t.stage);
+    const thumbs = (t.images || []).slice(0, 10);
+
+    root.innerHTML = `
+      <div>
+        <div class="detailTitle">${escapeHtml(t.title)}</div>
+        <div class="metaLine">
+          <span class="pillSmall stage">${escapeHtml(t.stage)}</span>
+          <span class="chip ${statusChipClass}">${escapeHtml(t.status)}</span>
+          <span class="pillSmall">${escapeHtml(p?.name || "Unknown project")}</span>
+          <span style="font-family:var(--mono); color:var(--muted2);">Updated: ${new Date(t.updatedAt||Date.now()).toLocaleString()}</span>
+        </div>
+
+        <div class="section" style="border-top:none; padding-top:0; margin-top:0;">
+          <h3>Images</h3>
+          <div class="imgHero"><img id="heroImg" alt="" src="${heroUrl}"></div>
+          <div class="thumbs" id="thumbs"></div>
+          <div class="row" style="margin-top:10px;">
+            <label class="btn ghost" for="imgUpload">+ Add image</label>
+            <input id="imgUpload" type="file" accept="image/*" style="display:none;" />
+            <button class="btn ghost" id="btnRemoveImg">Remove current</button>
+          </div>
+          <div style="margin-top:8px; color:var(--muted2); font-size:12px;">
+            Images are stored <b>locally on this device</b> (GitHub Pages is static).
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Description</h3>
+          <textarea id="desc">${escapeHtml(t.description || "")}</textarea>
+          <div class="row" style="margin-top:10px;">
+            <button class="btn" id="btnSaveDesc">Save</button>
+            <span style="color:var(--muted2); font-size:12px;">Tip: keep brief notes + next action.</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Status & progress</h3>
+          <div class="row">
+            <button class="btn ghost" data-status="Not Started">Not Started</button>
+            <button class="btn ghost" data-status="In Progress">In Progress</button>
+            <button class="btn ghost" data-status="Done">Done</button>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div style="flex:1; min-width:200px;">
+              <div style="color:var(--muted2); font-size:12px; margin-bottom:6px;">Progress: <span id="progLabel">${clamp(Number(t.progress)||0,0,100)}%</span></div>
+              <input id="prog" type="range" min="0" max="100" value="${clamp(Number(t.progress)||0,0,100)}" style="width:100%;" />
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>File links</h3>
+          <div class="fileList" id="files"></div>
+          <div class="row" style="margin-top:10px;">
+            <input id="fileName" placeholder="Filename (e.g. turntable.blend)" style="flex:1; min-width:180px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:var(--text); padding:10px 12px; outline:none;">
+            <input id="fileUrl" placeholder="URL (Drive, Dropbox, etc.)" style="flex:1; min-width:180px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:var(--text); padding:10px 12px; outline:none;">
+            <button class="btn" id="btnAddFile">Add</button>
+          </div>
+          <div style="margin-top:8px; color:var(--muted2); font-size:12px;">
+            Use links because GitHub Pages can’t store uploads server-side.
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Comments</h3>
+          <textarea id="commentBox" placeholder="Add a comment / next steps…"></textarea>
+          <div class="row" style="margin-top:10px;">
+            <button class="btn ghost" id="btnAddComment">Add comment</button>
+            <span style="color:var(--muted2); font-size:12px;">(Stored in description footer for simplicity.)</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // thumbs
+    const thumbsEl = el("thumbs");
+    thumbsEl.innerHTML = "";
+    thumbs.forEach((src, i) => {
+      const d = document.createElement("div");
+      d.className = "thumb";
+      d.title = "Set as main";
+      const im = document.createElement("img");
+      im.alt = "";
+      im.src = src;
+      d.appendChild(im);
+      d.onclick = () => {
+        t.heroIndex = i;
+        t.updatedAt = Date.now();
+        save();
+        renderDetail();
+        renderCards();
+        renderTasksQuick();
+      };
+      thumbsEl.appendChild(d);
+    });
+
+    // files
+    renderFilesList(t);
+
+    // description save
+    el("btnSaveDesc").onclick = () => {
+      t.description = el("desc").value;
+      t.updatedAt = Date.now();
+      save();
+      renderCards();
+      renderTasksQuick();
+    };
+
+    // status buttons
+    root.querySelectorAll("[data-status]").forEach(btn => {
+      btn.onclick = () => {
+        t.status = btn.getAttribute("data-status");
+        if(t.status === "Done") t.progress = 100;
+        t.updatedAt = Date.now();
+        save();
+        renderAll();
+      };
+    });
+
+    // progress slider
+    el("prog").oninput = (e) => {
+      const v = Number(e.target.value)||0;
+      el("progLabel").textContent = v + "%";
+    };
+    el("prog").onchange = (e) => {
+      t.progress = Number(e.target.value)||0;
+      t.updatedAt = Date.now();
+      save();
+      renderAll();
+    };
+
+    // image upload
+    el("imgUpload").onchange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if(!file) return;
+      const dataUrl = await fileToDataURL(file);
+      t.images = t.images || [];
+      t.images.unshift(dataUrl);
+      t.heroIndex = 0;
+      t.updatedAt = Date.now();
+      save();
+      renderAll();
+      e.target.value = "";
+    };
+
+    // remove current hero
+    el("btnRemoveImg").onclick = () => {
+      if(!t.images || t.images.length === 0) return;
+      const idx = t.heroIndex || 0;
+      t.images.splice(idx, 1);
+      t.heroIndex = 0;
+      t.updatedAt = Date.now();
+      save();
+      renderAll();
+    };
+
+    // add file link
+    el("btnAddFile").onclick = () => {
+      const name = el("fileName").value.trim();
+      const url = el("fileUrl").value.trim();
+      if(!name || !url) return alert("Add both a filename and a URL.");
+      t.files = t.files || [];
+      t.files.unshift({ name, url });
+      t.updatedAt = Date.now();
+      save();
+      el("fileName").value = "";
+      el("fileUrl").value = "";
+      renderFilesList(t);
+      renderCards();
+      renderTasksQuick();
+    };
+
+    // add comment: append to description for simplicity
+    el("btnAddComment").onclick = () => {
+      const c = el("commentBox").value.trim();
+      if(!c) return;
+      const stamp = new Date().toLocaleString();
+      t.description = (t.description || "") + `\n\n[${stamp}] ${c}`;
+      t.updatedAt = Date.now();
+      save();
+      renderDetail();
+      renderCards();
+      renderTasksQuick();
+    };
+  }
+
+  function renderFilesList(t){
+    const list = el("files");
+    list.innerHTML = "";
+    const files = (t.files || []);
+    if(files.length === 0){
+      list.innerHTML = `<div class="empty">No file links yet. Add one below.</div>`;
+      return;
+    }
+    files.forEach((f, i) => {
+      const item = document.createElement("div");
+      item.className = "fileItem";
+
+      const left = document.createElement("div");
+      left.className = "fileLeft";
+
+      const icon = document.createElement("div");
+      icon.className = "ficon";
+      icon.textContent = "⧉";
+
+      const meta = document.createElement("div");
+      meta.style.minWidth = "0";
+      const n = document.createElement("div");
+      n.className = "fname";
+      n.textContent = f.name || "File";
+      const u = document.createElement("div");
+      u.className = "furl";
+      u.textContent = f.url || "";
+      meta.append(n,u);
+
+      left.append(icon, meta);
+
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.gap = "8px";
+      right.style.alignItems = "center";
+
+      const a = document.createElement("a");
+      a.href = f.url || "#";
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = "Open";
+
+      const del = document.createElement("button");
+      del.className = "btn ghost";
+      del.textContent = "Remove";
+      del.onclick = () => {
+        t.files.splice(i,1);
+        t.updatedAt = Date.now();
+        save();
+        renderFilesList(t);
+        renderCards();
+        renderTasksQuick();
+      };
+
+      right.append(a, del);
+
+      item.append(left, right);
+      list.appendChild(item);
+    });
+  }
+
+  // Actions: new task, new project, duplicate, delete, export/import, reset
+  el("btnNewProject").onclick = () => {
+    const name = prompt("Project name?");
+    if(!name) return;
+    const p = { id: uid("p"), name: name.trim(), progress: 0 };
+    state.data.projects.unshift(p);
+    state.selectedProjectId = p.id;
+    save();
+    renderAll();
+    showPanel("left");
+  };
+
+  el("btnNewTask").onclick = () => {
+    const projectId = state.selectedProjectId || state.data.projects[0]?.id;
+    if(!projectId) return alert("Create a project first.");
+    const title = prompt("Task title?");
+    if(!title) return;
+    const stage = prompt("Stage (Concept, AI Model, 3D Model, UV, Texture, Rig/Pose, Render)?", "3D Model") || "3D Model";
+    const safeStage = STAGES.includes(stage) ? stage : "3D Model";
+    const shortDesc = prompt("Short description (1–2 lines)?", "Next action…") || "";
+
+    const t = {
+      id: uid("t"),
+      projectId,
+      stage: safeStage,
+      title: title.trim(),
+      shortDesc: shortDesc.trim(),
+      status: "Not Started",
+      progress: 0,
+      updatedAt: Date.now(),
+      description: shortDesc.trim(),
+      images: [ placeholderSvg(safeStage) ],
+      files: [],
+      heroIndex: 0
+    };
+    state.data.tasks.unshift(t);
+    state.selectedTaskId = t.id;
+    save();
+    renderAll();
+    showPanel("right");
+  };
+
+  el("btnDuplicate").onclick = () => {
+    const t = getSelectedTask();
+    if(!t) return;
+    const copy = JSON.parse(JSON.stringify(t));
+    copy.id = uid("t");
+    copy.title = t.title + " (copy)";
+    copy.updatedAt = Date.now();
+    state.data.tasks.unshift(copy);
+    state.selectedTaskId = copy.id;
+    save();
+    renderAll();
+  };
+
+  el("btnDeleteTask").onclick = () => {
+    const t = getSelectedTask();
+    if(!t) return;
+    if(!confirm("Delete this task?")) return;
+    state.data.tasks = state.data.tasks.filter(x => x.id !== t.id);
+    state.selectedTaskId = state.data.tasks.find(x => x.projectId === state.selectedProjectId)?.id
+      || state.data.tasks[0]?.id || null;
+    save();
+    renderAll();
+  };
+
+  el("btnExport").onclick = () => {
+    const blob = new Blob([JSON.stringify(state.data, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "project-tracker-export.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  el("btnImport").onclick = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if(!file) return;
+      try{
+        const text = await file.text();
+        const json = JSON.parse(text);
+        if(!json.projects || !json.tasks) throw new Error("Invalid format");
+        state.data = json;
+        save();
+        // reset selections
+        state.selectedProjectId = state.data.projects[0]?.id || null;
+        state.selectedTaskId = state.data.tasks[0]?.id || null;
+        renderAll();
+        alert("Imported!");
+      }catch(e){
+        alert("Import failed: " + (e.message || e));
+      }
+    };
+    input.click();
+  };
+
+  el("btnReset").onclick = () => {
+    if(!confirm("Reset ALL data on this device?")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state.selectedProjectId = null;
+    state.selectedTaskId = null;
+    state.statusFilter = "All";
+    state.sortBy = "updated";
+    state.query = "";
+    state.scope = "selected";
+    load();
+  };
+
+  // Search & sort
+  el("q").addEventListener("input", (e) => {
+    state.query = e.target.value || "";
+    renderCards();
+  });
+  el("sortBy").addEventListener("change", (e) => {
+    state.sortBy = e.target.value;
+    renderCards();
+  });
+
+  // Mobile panel toggles
+  function showPanel(which){
+    const left = el("leftPanel");
+    const mid = el("midPanel");
+    const right = el("rightPanel");
+
+    // for wide screens do nothing
+    if(window.matchMedia("(min-width: 821px)").matches) return;
+
+    left.classList.remove("show");
+    mid.classList.remove("show");
+    right.classList.remove("show");
+
+    if(which==="left") left.classList.add("show");
+    if(which==="mid") mid.classList.add("show");
+    if(which==="right") right.classList.add("show");
+  }
+  el("btnShowLeft").onclick = () => showPanel("left");
+  el("btnShowMid").onclick = () => showPanel("mid");
+  el("btnShowRight").onclick = () => showPanel("right");
+
+  // Helpers
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function fileToDataURL(file){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  // Kickoff
+  load();
+  // Default on mobile: show grid first
+  showPanel("mid");
+})();
+</script>
+</body>
+</html>
