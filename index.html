@@ -83,6 +83,22 @@
       font-size: 13px;
     }
     .pill select{ width:auto; cursor:pointer; }
+
+    /* Fix readability for selects (portfolio & scope etc.) */
+    select{
+      color: var(--text);
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      padding: 6px 10px;
+      outline: none;
+      appearance: none;
+    }
+    option{
+      color: #f1f1f1;
+      background: #2b2b2b;
+    }
+
     .btn{
       cursor:pointer;
       border-radius: 999px;
@@ -617,7 +633,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Project Tracker</h1>
-          <div class="sub">Portfolios → projects → tasks</div>
+          <div class="sub">Portfolios → projects → tasks • JPEG re-encode on upload</div>
         </div>
       </div>
 
@@ -724,7 +740,7 @@
 
 <script>
 (() => {
-  const STORAGE_KEY = "pt_v3_portfolios_categories";
+  const STORAGE_KEY = "pt_v4_jpeg_compress_select_fix";
 
   const STAGES = ["Concept","AI Model","3D Model","UV","Texture","Rig/Pose","Render"];
   const STATUS = ["Not Started","In Progress","Done"];
@@ -732,11 +748,18 @@
   const DEFAULT_PORT_ID = "port_default";
   const ALL_PORT_ID = "port_all";
 
+  // Image compression defaults (Option A)
+  const IMG = {
+    quality: 0.82,              // inside 0.75–0.85 requested
+    maxEdge: 2048,              // resize big images (major savings)
+    mime: "image/jpeg"          // re-encode to JPEG
+  };
+
   const el = (id) => document.getElementById(id);
 
   const state = {
     data: null,
-    selectedPortfolioId: DEFAULT_PORT_ID, // ALL_PORT_ID allowed
+    selectedPortfolioId: DEFAULT_PORT_ID,
     selectedProjectId: null,
     selectedTaskId: null,
     statusFilter: "All",
@@ -753,14 +776,6 @@
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-  function fileToDataURL(file){
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = reject;
-      r.readAsDataURL(file);
-    });
   }
 
   function placeholderSvg(label){
@@ -786,9 +801,7 @@
   }
 
   function defaultData(){
-    const portfolios = [
-      { id: DEFAULT_PORT_ID, name: "Default" }
-    ];
+    const portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
 
     const p1 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Fantasy Creature", category:"Dragon", progress: 0 };
     const p2 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Fixelpuck Mascot", category:"Mascot", progress: 0 };
@@ -803,7 +816,7 @@
       shortDesc,
       status,
       progress,
-      prevProgress: progress,              // <-- for “Done → back” restoration
+      prevProgress: progress,
       updatedAt: now - updatedAtOffset,
       description: shortDesc + "\n\nNotes:\n- ",
       images: [ placeholderSvg(stage) ],
@@ -826,7 +839,6 @@
   }
 
   function migrateData(d){
-    // Add portfolios if missing (old versions)
     if(!d.portfolios){
       d.portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
     }
@@ -834,15 +846,16 @@
       d.portfolios.unshift({ id: DEFAULT_PORT_ID, name: "Default" });
     }
 
-    // Projects: ensure portfolioId + category
     (d.projects || []).forEach(p => {
       if(!p.portfolioId) p.portfolioId = DEFAULT_PORT_ID;
       if(typeof p.category !== "string") p.category = "";
     });
 
-    // Tasks: ensure prevProgress
     (d.tasks || []).forEach(t => {
       if(typeof t.prevProgress !== "number") t.prevProgress = Number(t.progress) || 0;
+      if(!Array.isArray(t.images)) t.images = [];
+      if(!Array.isArray(t.files)) t.files = [];
+      if(typeof t.heroIndex !== "number") t.heroIndex = 0;
     });
 
     return d;
@@ -861,12 +874,10 @@
       state.data = defaultData();
     }
 
-    // Ensure selected portfolio valid
     if(!state.data.portfolios.find(p => p.id === state.selectedPortfolioId) && state.selectedPortfolioId !== ALL_PORT_ID){
       state.selectedPortfolioId = DEFAULT_PORT_ID;
     }
 
-    // Default selections
     if(!state.selectedProjectId){
       state.selectedProjectId = firstVisibleProject()?.id ?? null;
     }
@@ -937,7 +948,6 @@
 
   function visibleProjects(){
     let projs = currentPortfolioProjects();
-
     if(state.categoryFilter !== "all"){
       projs = projs.filter(p => (p.category || "").trim().toLowerCase() === state.categoryFilter);
     }
@@ -961,13 +971,11 @@
     const sel = el("portfolioSel");
     sel.innerHTML = "";
 
-    // All
     const oAll = document.createElement("option");
     oAll.value = ALL_PORT_ID;
     oAll.textContent = "All portfolios";
     sel.appendChild(oAll);
 
-    // Portfolios
     state.data.portfolios.forEach(p => {
       const o = document.createElement("option");
       o.value = p.id;
@@ -975,7 +983,6 @@
       sel.appendChild(o);
     });
 
-    // actions
     sel.appendChild(new Option("────────", "__sep__", true, false));
     sel.appendChild(new Option("➕ New portfolio…", "__new__"));
     sel.appendChild(new Option("✎ Rename selected…", "__rename__"));
@@ -1031,10 +1038,10 @@
           if(!port) return;
 
           const projectsIn = state.data.projects.filter(p => p.portfolioId === port.id);
-          const taskCount = state.data.tasks.filter(t => projectsIn.some(p => p.id === t.projectId)).length;
+          const projIds = new Set(projectsIn.map(p => p.id));
+          const taskCount = state.data.tasks.filter(t => projIds.has(t.projectId)).length;
 
           if(confirm(`Delete portfolio "${port.name}"?\nThis will also delete ${projectsIn.length} project(s) and ${taskCount} task(s).`)){
-            const projIds = new Set(projectsIn.map(p => p.id));
             state.data.tasks = state.data.tasks.filter(t => !projIds.has(t.projectId));
             state.data.projects = state.data.projects.filter(p => p.portfolioId !== port.id);
             state.data.portfolios = state.data.portfolios.filter(p => p.id !== port.id);
@@ -1052,7 +1059,6 @@
         return;
       }
 
-      // normal select
       state.selectedPortfolioId = v;
       state.categoryFilter = "all";
       buildCategoryFilter();
@@ -1081,7 +1087,6 @@
     sel.innerHTML = "";
     sel.appendChild(new Option("All", "all"));
 
-    // categories present in current portfolio (not All portfolios if you want — but it’s fine)
     const cats = new Set(
       currentPortfolioProjects()
         .map(p => (p.category || "").trim())
@@ -1102,7 +1107,6 @@
   }
 
   function ensureSelectionsAfterFilter(){
-    // Ensure selected project is visible after portfolio/category changes
     const vis = visibleProjects();
     if(vis.length === 0){
       state.selectedProjectId = null;
@@ -1113,8 +1117,7 @@
       state.selectedProjectId = vis[0].id;
     }
     const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
-    if(firstTask) state.selectedTaskId = firstTask.id;
-    else state.selectedTaskId = firstVisibleTask()?.id ?? null;
+    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
   }
 
   function buildStatusFilters(){
@@ -1246,7 +1249,6 @@
   }
 
   function taskMatchesFilters(t){
-    // search/status
     if(state.statusFilter !== "All" && t.status !== state.statusFilter) return false;
 
     const q = (state.query || "").trim().toLowerCase();
@@ -1255,7 +1257,6 @@
       if(!hay.includes(q)) return false;
     }
 
-    // scope logic
     const project = state.data.projects.find(p => p.id === t.projectId);
     if(!project) return false;
 
@@ -1268,8 +1269,7 @@
     if(state.scope === "portfolio"){
       return projectVisibleByPort && projectVisibleByCat;
     }
-    // "all"
-    return projectVisibleByCat; // category filter still makes sense even in All portfolios
+    return projectVisibleByCat;
   }
 
   function renderTasksQuick(){
@@ -1411,13 +1411,67 @@
     return state.data.tasks.find(t => t.id === state.selectedTaskId) || null;
   }
 
+  // --- JPEG re-encode utilities (Option A) ---
+  function loadImageFromFile(file){
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  function canvasToDataURL(canvas, mime, quality){
+    return new Promise((resolve) => {
+      // Some browsers ignore quality for PNG; we're using JPEG.
+      const url = canvas.toDataURL(mime, quality);
+      resolve(url);
+    });
+  }
+
+  async function compressImageFileToJpegDataUrl(file, {maxEdge, quality, mime}){
+    const img = await loadImageFromFile(file);
+
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+
+    const scale = Math.min(1, maxEdge / Math.max(w,h));
+    const outW = Math.max(1, Math.round(w * scale));
+    const outH = Math.max(1, Math.round(h * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = outW;
+    canvas.height = outH;
+
+    const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+    // High quality downscale in modern browsers:
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    // White background to avoid black/transparent weirdness when converting to JPEG
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0,0,outW,outH);
+    ctx.drawImage(img, 0, 0, outW, outH);
+
+    return await canvasToDataURL(canvas, mime, quality);
+  }
+
   async function addImagesToTask(task, files){
     const imgs = Array.from(files || []).filter(f => f && f.type && f.type.startsWith("image/"));
     if(imgs.length === 0) return;
 
+    // compress each to JPEG
     const dataUrls = [];
     for(const f of imgs){
-      dataUrls.push(await fileToDataURL(f));
+      try{
+        const out = await compressImageFileToJpegDataUrl(f, IMG);
+        dataUrls.push(out);
+      }catch(e){
+        // fallback: if compression fails, skip or store raw
+        // We'll store raw via FileReader as fallback.
+        dataUrls.push(await fileToDataURLFallback(f));
+      }
     }
 
     task.images = task.images || [];
@@ -1426,6 +1480,15 @@
     task.updatedAt = Date.now();
     save();
     renderAll();
+  }
+
+  function fileToDataURLFallback(file){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
   }
 
   function attachDropZoneHandlers(zoneEl, task){
@@ -1448,7 +1511,6 @@
     const curProg = clamp(Number(t.progress)||0, 0, 100);
 
     if(newStatus === "Done"){
-      // store last non-done value
       t.prevProgress = (curProg >= 100 ? (Number(t.prevProgress)||0) : curProg);
       t.status = "Done";
       t.progress = 100;
@@ -1458,10 +1520,9 @@
         const restored = clamp(Number(t.prevProgress)||50, 0, 99);
         t.progress = restored > 0 ? restored : 50;
       } else {
-        // keep current progress, but keep prev updated
         t.prevProgress = clamp(curProg, 0, 99);
       }
-    } else { // Not Started
+    } else {
       t.status = "Not Started";
       t.prevProgress = 0;
       t.progress = 0;
@@ -1506,7 +1567,7 @@
         </div>
 
         <div class="section" style="border-top:none; padding-top:0; margin-top:0;">
-          <h3>Images</h3>
+          <h3>Images (stored as JPEG q=${IMG.quality}, maxEdge=${IMG.maxEdge}px)</h3>
 
           <div class="dropZone imgHero" id="dropZone">
             <img alt="" src="${heroUrl}">
@@ -1522,7 +1583,7 @@
           </div>
 
           <div style="margin-top:8px; color:var(--muted2); font-size:12px;">
-            Images are stored <b>locally on this device</b> (GitHub Pages is static).
+            Tip: upload renders at screen-ish size (the app will downscale big ones).
           </div>
         </div>
 
@@ -1576,7 +1637,6 @@
       });
     };
 
-    // thumbs
     const thumbsEl = el("thumbs");
     thumbsEl.innerHTML = "";
     thumbs.forEach((src, i) => {
@@ -1600,7 +1660,6 @@
 
     attachDropZoneHandlers(el("dropZone"), t);
 
-    // image upload
     el("imgUpload").onchange = async (e) => {
       const files = e.target.files;
       if(!files || !files.length) return;
@@ -1618,10 +1677,8 @@
       renderAll();
     };
 
-    // files
     renderFilesList(t);
 
-    // desc save
     el("btnSaveDesc").onclick = () => {
       t.description = el("desc").value;
       t.updatedAt = Date.now();
@@ -1630,12 +1687,10 @@
       renderTasksQuick();
     };
 
-    // status buttons (FIXED progress restore)
     el("sNS").onclick = () => applyStatus(t, "Not Started");
     el("sIP").onclick = () => applyStatus(t, "In Progress");
     el("sDN").onclick = () => applyStatus(t, "Done");
 
-    // progress slider
     el("prog").oninput = (e) => {
       const v = Number(e.target.value)||0;
       el("progLabel").textContent = v + "%";
@@ -1658,7 +1713,6 @@
       renderAll();
     };
 
-    // add file link
     el("btnAddFile").onclick = () => {
       const name = el("fileName").value.trim();
       const url = el("fileUrl").value.trim();
@@ -1860,7 +1914,6 @@
         state.data = json;
         save();
 
-        // reset view to default
         state.selectedPortfolioId = DEFAULT_PORT_ID;
         state.categoryFilter = "all";
         buildPortfolioSelect();
@@ -1918,7 +1971,24 @@
   el("btnShowMid").onclick = () => showPanel("mid");
   el("btnShowRight").onclick = () => showPanel("right");
 
-  // Kickoff
+  function buildStatusFilters(){
+    const wrap = el("statusFilters");
+    wrap.innerHTML = "";
+    const items = ["All", ...STATUS];
+    items.forEach(s => {
+      const b = document.createElement("div");
+      b.className = "filterChip" + (state.statusFilter===s ? " active" : "");
+      b.textContent = s;
+      b.onclick = () => {
+        state.statusFilter = s;
+        buildStatusFilters();
+        renderCards();
+      };
+      wrap.appendChild(b);
+    });
+  }
+
+  // init
   load();
   showPanel("mid");
 })();
