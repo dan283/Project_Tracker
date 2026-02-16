@@ -6,7 +6,6 @@
   <title>Project Tracker</title>
   <style>
     :root{
-      /* Blender-ish */
       --bg:#1f1f1f;
       --panel:#2b2b2b;
       --panel2:#303030;
@@ -40,7 +39,6 @@
         var(--bg);
     }
 
-    /* Scrollbars */
     *::-webkit-scrollbar{ width:10px; height:10px; }
     *::-webkit-scrollbar-track{ background: rgba(255,255,255,.04); border-radius: 999px; }
     *::-webkit-scrollbar-thumb{ background: rgba(242,140,40,.55); border-radius: 999px; border: 2px solid rgba(0,0,0,.25); }
@@ -124,7 +122,6 @@
       overflow: hidden;
     }
 
-    /* Left */
     .left{ display:flex; flex-direction:column; }
     .panelHead{
       padding: 12px 12px;
@@ -169,6 +166,7 @@
       display:flex; align-items:center; justify-content:space-between;
       border-bottom: 1px solid var(--line);
       background: rgba(255,255,255,.02);
+      gap: 10px;
     }
     .blockScroll{
       padding: 8px;
@@ -251,6 +249,7 @@
     .tmeta{ flex:1; min-width:0; }
     .ttitle{ font-weight: 800; font-size: 12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .tstage{ font-size: 11px; color: var(--muted2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
     .chip{
       font-size: 11px;
       padding: 6px 10px;
@@ -265,7 +264,6 @@
     .chip.progress{ border-color: rgba(255,204,102,.35); background: rgba(255,204,102,.13); color: rgba(255,245,220,.92); }
     .chip.todo{ border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: var(--muted); }
 
-    /* Middle grid */
     .middle{ display:flex; flex-direction:column; min-height:0; }
     .middleTools{
       padding: 10px;
@@ -400,7 +398,6 @@
       flex: 0 0 auto;
     }
 
-    /* Right detail */
     .right{ display:flex; flex-direction:column; min-height:0; }
     .detailScroll{ padding: 12px; overflow:auto; min-height:0; }
     .detailTitle{
@@ -503,13 +500,10 @@
     }
     textarea:focus{ box-shadow: 0 0 0 3px rgba(242,140,40,.18); border-color: rgba(242,140,40,.4); }
 
-    .row{
-      display:flex; gap: 10px; align-items:center; flex-wrap:wrap;
-    }
+    .row{ display:flex; gap: 10px; align-items:center; flex-wrap:wrap; }
     .row .btn{ padding: 9px 12px; }
-    .fileList{
-      display:flex; flex-direction:column; gap: 8px;
-    }
+
+    .fileList{ display:flex; flex-direction:column; gap: 8px; }
     .fileItem{
       display:flex; align-items:center; justify-content:space-between; gap: 10px;
       padding: 10px;
@@ -542,7 +536,6 @@
       line-height: 1.35;
     }
 
-    /* Inline rename UI */
     .iconBtn{
       cursor:pointer;
       border-radius: 10px;
@@ -557,11 +550,13 @@
     }
     .iconBtn:hover{ filter: brightness(1.10); }
     .iconBtn:active{ transform: translateY(1px); }
+
     .nameRow{
       display:flex;
       align-items:center;
       gap: 8px;
       justify-content:space-between;
+      min-width: 0;
     }
     .pname{
       font-weight: 850;
@@ -571,6 +566,14 @@
       text-overflow:ellipsis;
       min-width:0;
       flex: 1 1 auto;
+    }
+    .psub{
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted2);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     .editInput{
       width: 100%;
@@ -583,11 +586,8 @@
       font-weight: 850;
       min-width:0;
     }
-    .editInput:focus{
-      box-shadow: 0 0 0 3px rgba(242,140,40,.18);
-    }
+    .editInput:focus{ box-shadow: 0 0 0 3px rgba(242,140,40,.18); }
 
-    /* Mobile: panels toggle */
     .mobileToggles{ display:none; gap: 8px; align-items:center; }
 
     @media (max-width: 1100px){
@@ -617,7 +617,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Project Tracker</h1>
-          <div class="sub">Projects → tasks → stages (cards) • device-local save</div>
+          <div class="sub">Portfolios → projects → tasks</div>
         </div>
       </div>
 
@@ -633,9 +633,14 @@
           <input id="q" placeholder="Search tasks…" />
         </div>
 
-        <div class="pill" title="Scope">
-          <span style="color:var(--muted2);font-weight:900;">Project</span>
-          <select id="projectScope"></select>
+        <div class="pill" title="Portfolio">
+          <span style="color:var(--muted2);font-weight:900;">Portfolio</span>
+          <select id="portfolioSel"></select>
+        </div>
+
+        <div class="pill" title="Task scope">
+          <span style="color:var(--muted2);font-weight:900;">Scope</span>
+          <select id="scopeSel"></select>
         </div>
 
         <button class="btn" id="btnNewTask">+ New Task</button>
@@ -649,7 +654,6 @@
 
 <main>
   <div class="layout">
-    <!-- LEFT -->
     <section class="panel left" id="leftPanel">
       <div class="panelHead">
         <div class="title">Workspace</div>
@@ -664,6 +668,10 @@
           <div class="block" style="flex: 1 1 55%;">
             <div class="blockHead">
               <span>Projects</span>
+              <div class="pill" style="padding:6px 10px; min-height:32px;">
+                <span style="color:var(--muted2);font-weight:900;">Category</span>
+                <select id="catFilter" style="width:auto;"></select>
+              </div>
               <span style="font-family:var(--mono); color:var(--muted2);" id="projCount">0</span>
             </div>
             <div class="blockScroll" id="projectsList"></div>
@@ -680,7 +688,6 @@
       </div>
     </section>
 
-    <!-- MIDDLE -->
     <section class="panel middle" id="midPanel">
       <div class="middleTools">
         <div class="chipsRow" id="statusFilters"></div>
@@ -701,7 +708,6 @@
       </div>
     </section>
 
-    <!-- RIGHT -->
     <section class="panel right" id="rightPanel">
       <div class="panelHead">
         <div class="title">Task details</div>
@@ -718,27 +724,44 @@
 
 <script>
 (() => {
-  const STORAGE_KEY = "pt_v2_blender_orange_rename";
+  const STORAGE_KEY = "pt_v3_portfolios_categories";
 
   const STAGES = ["Concept","AI Model","3D Model","UV","Texture","Rig/Pose","Render"];
   const STATUS = ["Not Started","In Progress","Done"];
+
+  const DEFAULT_PORT_ID = "port_default";
+  const ALL_PORT_ID = "port_all";
 
   const el = (id) => document.getElementById(id);
 
   const state = {
     data: null,
+    selectedPortfolioId: DEFAULT_PORT_ID, // ALL_PORT_ID allowed
     selectedProjectId: null,
     selectedTaskId: null,
     statusFilter: "All",
     sortBy: "updated",
     query: "",
-    scope: "selected", // selected or all
+    scope: "project", // project | portfolio | all
+    categoryFilter: "all",
   };
 
   function uid(prefix="id"){
     return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
   }
   function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function fileToDataURL(file){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
 
   function placeholderSvg(label){
     const bg = "#1c1c1c";
@@ -755,7 +778,7 @@
   <rect width="100%" height="100%" fill="url(#g)"/>
   <rect x="36" y="36" width="828" height="448" rx="28" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.10)"/>
   <text x="70" y="120" font-family="ui-monospace, Menlo, Monaco" font-size="34" fill="rgba(255,255,255,0.55)">${txt}</text>
-  <text x="70" y="170" font-family="system-ui, -apple-system" font-size="22" fill="rgba(255,255,255,0.38)">Drop or upload images per task</text>
+  <text x="70" y="170" font-family="system-ui, -apple-system" font-size="22" fill="rgba(255,255,255,0.38)">Upload images per task</text>
   <circle cx="790" cy="140" r="46" fill="rgba(242,140,40,0.22)" stroke="rgba(242,140,40,0.30)"/>
   <path d="M772 140h36M790 122v36" stroke="${fg}" stroke-width="6" stroke-linecap="round"/>
 </svg>`;
@@ -763,9 +786,13 @@
   }
 
   function defaultData(){
-    const p1 = { id: uid("p"), name:"Fantasy Creature", progress: 38 };
-    const p2 = { id: uid("p"), name:"Fixelpuck Mascot", progress: 62 };
-    const p3 = { id: uid("p"), name:"Sci-Fi Prop Set", progress: 15 };
+    const portfolios = [
+      { id: DEFAULT_PORT_ID, name: "Default" }
+    ];
+
+    const p1 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Fantasy Creature", category:"Dragon", progress: 0 };
+    const p2 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Fixelpuck Mascot", category:"Mascot", progress: 0 };
+    const p3 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Sci-Fi Prop Set", category:"Props", progress: 0 };
 
     const now = Date.now();
     const mkTask = (projectId, stage, title, shortDesc, status, progress, updatedAtOffset=0) => ({
@@ -776,12 +803,11 @@
       shortDesc,
       status,
       progress,
+      prevProgress: progress,              // <-- for “Done → back” restoration
       updatedAt: now - updatedAtOffset,
       description: shortDesc + "\n\nNotes:\n- ",
       images: [ placeholderSvg(stage) ],
-      files: [
-        { name: "Reference board", url: "https://example.com" }
-      ],
+      files: [{ name: "Reference board", url: "https://example.com" }],
       heroIndex: 0
     });
 
@@ -789,19 +815,37 @@
       mkTask(p1.id,"Concept","Silhouette exploration","10 fast silhouettes, pick top 3.", "In Progress", 45, 1000*60*10),
       mkTask(p1.id,"AI Model","Midjourney / SD pass","Generate 6 variants matching silhouette.", "Not Started", 0, 1000*60*60*2),
       mkTask(p1.id,"3D Model","Base sculpt","Primary forms + proportions locked.", "In Progress", 30, 1000*60*30),
-      mkTask(p1.id,"UV","UV unwrap","Clean seams, consistent texel density.", "Not Started", 0, 1000*60*60*6),
-      mkTask(p1.id,"Texture","Handpaint / stylized","Material breakup + roughness pass.", "Not Started", 0, 1000*60*60*12),
-      mkTask(p1.id,"Rig/Pose","Simple rig + 3 poses","Deform check + facial controls.", "Not Started", 0, 1000*60*60*24),
-      mkTask(p1.id,"Render","Turntable render","Neutral studio, 3 angles + closeups.", "Not Started", 0, 1000*60*60*36),
 
       mkTask(p2.id,"Concept","Logo + shape language","Blocky, cute, readable from far.", "Done", 100, 1000*60*60*72),
       mkTask(p2.id,"3D Model","Clean topology pass","Animation friendly edgeflow.", "In Progress", 70, 1000*60*60*20),
-      mkTask(p2.id,"Render","Portfolio renders","Blender-style studio lighting.", "Not Started", 0, 1000*60*60*5),
 
       mkTask(p3.id,"Concept","Prop list + refs","Collect 20 refs per prop.", "In Progress", 25, 1000*60*60*4),
     ];
 
-    return { projects: [p1,p2,p3], tasks };
+    return { portfolios, projects: [p1,p2,p3], tasks };
+  }
+
+  function migrateData(d){
+    // Add portfolios if missing (old versions)
+    if(!d.portfolios){
+      d.portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
+    }
+    if(!d.portfolios.find(p => p.id === DEFAULT_PORT_ID)){
+      d.portfolios.unshift({ id: DEFAULT_PORT_ID, name: "Default" });
+    }
+
+    // Projects: ensure portfolioId + category
+    (d.projects || []).forEach(p => {
+      if(!p.portfolioId) p.portfolioId = DEFAULT_PORT_ID;
+      if(typeof p.category !== "string") p.category = "";
+    });
+
+    // Tasks: ensure prevProgress
+    (d.tasks || []).forEach(t => {
+      if(typeof t.prevProgress !== "number") t.prevProgress = Number(t.progress) || 0;
+    });
+
+    return d;
   }
 
   function load(){
@@ -811,91 +855,37 @@
         state.data = defaultData();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
       }else{
-        state.data = JSON.parse(raw);
+        state.data = migrateData(JSON.parse(raw));
       }
     }catch(e){
       state.data = defaultData();
     }
 
-    // selections
-    if(!state.selectedProjectId){
-      state.selectedProjectId = state.data.projects[0]?.id ?? null;
+    // Ensure selected portfolio valid
+    if(!state.data.portfolios.find(p => p.id === state.selectedPortfolioId) && state.selectedPortfolioId !== ALL_PORT_ID){
+      state.selectedPortfolioId = DEFAULT_PORT_ID;
     }
-    // ensure selected project exists
+
+    // Default selections
+    if(!state.selectedProjectId){
+      state.selectedProjectId = firstVisibleProject()?.id ?? null;
+    }
     if(state.selectedProjectId && !state.data.projects.find(p=>p.id===state.selectedProjectId)){
-      state.selectedProjectId = state.data.projects[0]?.id ?? null;
+      state.selectedProjectId = firstVisibleProject()?.id ?? null;
     }
 
     const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
-    state.selectedTaskId = firstTask?.id ?? state.data.tasks[0]?.id ?? null;
+    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
 
+    buildPortfolioSelect();
+    buildScopeSelect();
     buildStatusFilters();
-    buildProjectScopeSelect();
+    buildCategoryFilter();
     renderAll();
   }
 
   function save(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-  }
-
-  function statusToChipClass(s){
-    if(s==="Done") return "done";
-    if(s==="In Progress") return "progress";
-    return "todo";
-  }
-  function statusToDotClass(s){
-    if(s==="Done") return "done";
-    if(s==="In Progress") return "progress";
-    return "todo";
-  }
-
-  function computeProjectProgress(projectId){
-    const tasks = state.data.tasks.filter(t => t.projectId === projectId);
-    if(tasks.length === 0) return 0;
-    const avg = tasks.reduce((a,t)=>a + (Number(t.progress)||0), 0) / tasks.length;
-    return Math.round(clamp(avg,0,100));
-  }
-
-  function buildProjectScopeSelect(){
-    const sel = el("projectScope");
-    sel.innerHTML = "";
-    const optSelected = document.createElement("option");
-    optSelected.value = "selected";
-    optSelected.textContent = "Selected project";
-    const optAll = document.createElement("option");
-    optAll.value = "all";
-    optAll.textContent = "All projects";
-    sel.append(optSelected, optAll);
-    sel.value = state.scope;
-    sel.onchange = () => {
-      state.scope = sel.value;
-      renderAll();
-      showPanel("mid");
-    };
-  }
-
-  function buildStatusFilters(){
-    const wrap = el("statusFilters");
-    wrap.innerHTML = "";
-    const items = ["All", ...STATUS];
-    items.forEach(s => {
-      const b = document.createElement("div");
-      b.className = "filterChip" + (state.statusFilter===s ? " active" : "");
-      b.textContent = s;
-      b.onclick = () => {
-        state.statusFilter = s;
-        buildStatusFilters();
-        renderCards();
-      };
-      wrap.appendChild(b);
-    });
-  }
-
-  function renderAll(){
-    renderProjects();
-    renderTasksQuick();
-    renderCards();
-    renderDetail();
   }
 
   function beginInlineEdit({ mountEl, initialValue, onSave, onCancel }){
@@ -922,25 +912,253 @@
     input.select();
   }
 
+  function statusToChipClass(s){
+    if(s==="Done") return "done";
+    if(s==="In Progress") return "progress";
+    return "todo";
+  }
+  function statusToDotClass(s){
+    if(s==="Done") return "done";
+    if(s==="In Progress") return "progress";
+    return "todo";
+  }
+
+  function computeProjectProgress(projectId){
+    const tasks = state.data.tasks.filter(t => t.projectId === projectId);
+    if(tasks.length === 0) return 0;
+    const avg = tasks.reduce((a,t)=>a + (Number(t.progress)||0), 0) / tasks.length;
+    return Math.round(clamp(avg,0,100));
+  }
+
+  function currentPortfolioProjects(){
+    if(state.selectedPortfolioId === ALL_PORT_ID) return state.data.projects.slice();
+    return state.data.projects.filter(p => p.portfolioId === state.selectedPortfolioId);
+  }
+
+  function visibleProjects(){
+    let projs = currentPortfolioProjects();
+
+    if(state.categoryFilter !== "all"){
+      projs = projs.filter(p => (p.category || "").trim().toLowerCase() === state.categoryFilter);
+    }
+    return projs;
+  }
+
+  function firstVisibleProject(){
+    return visibleProjects()[0] || null;
+  }
+
+  function visibleProjectIdsSet(){
+    return new Set(visibleProjects().map(p => p.id));
+  }
+
+  function firstVisibleTask(){
+    const projIds = visibleProjectIdsSet();
+    return state.data.tasks.find(t => projIds.has(t.projectId)) || null;
+  }
+
+  function buildPortfolioSelect(){
+    const sel = el("portfolioSel");
+    sel.innerHTML = "";
+
+    // All
+    const oAll = document.createElement("option");
+    oAll.value = ALL_PORT_ID;
+    oAll.textContent = "All portfolios";
+    sel.appendChild(oAll);
+
+    // Portfolios
+    state.data.portfolios.forEach(p => {
+      const o = document.createElement("option");
+      o.value = p.id;
+      o.textContent = p.name;
+      sel.appendChild(o);
+    });
+
+    // actions
+    sel.appendChild(new Option("────────", "__sep__", true, false));
+    sel.appendChild(new Option("➕ New portfolio…", "__new__"));
+    sel.appendChild(new Option("✎ Rename selected…", "__rename__"));
+    sel.appendChild(new Option("🗑 Delete selected…", "__delete__"));
+
+    sel.value = state.selectedPortfolioId;
+
+    sel.onchange = () => {
+      const v = sel.value;
+
+      if(v === "__new__"){
+        const name = prompt("New portfolio name?");
+        if(name){
+          const np = { id: uid("port"), name: name.trim() };
+          state.data.portfolios.push(np);
+          state.selectedPortfolioId = np.id;
+          state.categoryFilter = "all";
+          save();
+        }
+        buildPortfolioSelect();
+        buildCategoryFilter();
+        ensureSelectionsAfterFilter();
+        renderAll();
+        showPanel("left");
+        return;
+      }
+
+      if(v === "__rename__"){
+        if(state.selectedPortfolioId === ALL_PORT_ID){
+          alert("Select a specific portfolio to rename.");
+        } else {
+          const port = state.data.portfolios.find(p => p.id === state.selectedPortfolioId);
+          if(port){
+            const name = prompt("Rename portfolio:", port.name);
+            if(name){
+              port.name = name.trim();
+              save();
+            }
+          }
+        }
+        buildPortfolioSelect();
+        renderAll();
+        return;
+      }
+
+      if(v === "__delete__"){
+        if(state.selectedPortfolioId === ALL_PORT_ID){
+          alert("Select a specific portfolio to delete.");
+        } else if(state.selectedPortfolioId === DEFAULT_PORT_ID){
+          alert("Default portfolio can't be deleted.");
+        } else {
+          const port = state.data.portfolios.find(p => p.id === state.selectedPortfolioId);
+          if(!port) return;
+
+          const projectsIn = state.data.projects.filter(p => p.portfolioId === port.id);
+          const taskCount = state.data.tasks.filter(t => projectsIn.some(p => p.id === t.projectId)).length;
+
+          if(confirm(`Delete portfolio "${port.name}"?\nThis will also delete ${projectsIn.length} project(s) and ${taskCount} task(s).`)){
+            const projIds = new Set(projectsIn.map(p => p.id));
+            state.data.tasks = state.data.tasks.filter(t => !projIds.has(t.projectId));
+            state.data.projects = state.data.projects.filter(p => p.portfolioId !== port.id);
+            state.data.portfolios = state.data.portfolios.filter(p => p.id !== port.id);
+
+            state.selectedPortfolioId = DEFAULT_PORT_ID;
+            state.categoryFilter = "all";
+            save();
+          }
+        }
+        buildPortfolioSelect();
+        buildCategoryFilter();
+        ensureSelectionsAfterFilter();
+        renderAll();
+        showPanel("left");
+        return;
+      }
+
+      // normal select
+      state.selectedPortfolioId = v;
+      state.categoryFilter = "all";
+      buildCategoryFilter();
+      ensureSelectionsAfterFilter();
+      renderAll();
+      showPanel("left");
+    };
+  }
+
+  function buildScopeSelect(){
+    const sel = el("scopeSel");
+    sel.innerHTML = "";
+    sel.appendChild(new Option("Selected project", "project"));
+    sel.appendChild(new Option("This portfolio", "portfolio"));
+    sel.appendChild(new Option("All portfolios", "all"));
+    sel.value = state.scope;
+    sel.onchange = () => {
+      state.scope = sel.value;
+      renderAll();
+      showPanel("mid");
+    };
+  }
+
+  function buildCategoryFilter(){
+    const sel = el("catFilter");
+    sel.innerHTML = "";
+    sel.appendChild(new Option("All", "all"));
+
+    // categories present in current portfolio (not All portfolios if you want — but it’s fine)
+    const cats = new Set(
+      currentPortfolioProjects()
+        .map(p => (p.category || "").trim())
+        .filter(c => c.length > 0)
+    );
+    Array.from(cats).sort((a,b)=>a.localeCompare(b)).forEach(c => {
+      sel.appendChild(new Option(c, c.toLowerCase()));
+    });
+
+    sel.value = state.categoryFilter;
+
+    sel.onchange = () => {
+      state.categoryFilter = sel.value;
+      ensureSelectionsAfterFilter();
+      renderAll();
+      showPanel("left");
+    };
+  }
+
+  function ensureSelectionsAfterFilter(){
+    // Ensure selected project is visible after portfolio/category changes
+    const vis = visibleProjects();
+    if(vis.length === 0){
+      state.selectedProjectId = null;
+      state.selectedTaskId = null;
+      return;
+    }
+    if(!vis.find(p => p.id === state.selectedProjectId)){
+      state.selectedProjectId = vis[0].id;
+    }
+    const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
+    if(firstTask) state.selectedTaskId = firstTask.id;
+    else state.selectedTaskId = firstVisibleTask()?.id ?? null;
+  }
+
+  function buildStatusFilters(){
+    const wrap = el("statusFilters");
+    wrap.innerHTML = "";
+    const items = ["All", ...STATUS];
+    items.forEach(s => {
+      const b = document.createElement("div");
+      b.className = "filterChip" + (state.statusFilter===s ? " active" : "");
+      b.textContent = s;
+      b.onclick = () => {
+        state.statusFilter = s;
+        buildStatusFilters();
+        renderCards();
+      };
+      wrap.appendChild(b);
+    });
+  }
+
+  function renderAll(){
+    renderProjects();
+    renderTasksQuick();
+    renderCards();
+    renderDetail();
+  }
+
   function renderProjects(){
     const list = el("projectsList");
     list.innerHTML = "";
-    el("projCount").textContent = String(state.data.projects.length);
 
-    state.data.projects.forEach((p, idx) => {
+    const projs = visibleProjects();
+    el("projCount").textContent = String(projs.length);
+
+    projs.forEach((p, idx) => {
       p.progress = computeProjectProgress(p.id);
 
       const item = document.createElement("div");
       item.className = "projectItem" + (p.id===state.selectedProjectId ? " selected" : "");
       item.onclick = () => {
         state.selectedProjectId = p.id;
-
         const firstTask = state.data.tasks
           .filter(t => t.projectId === p.id)
           .sort((a,b)=>b.updatedAt-a.updatedAt)[0];
-        if(firstTask) state.selectedTaskId = firstTask.id;
-        else state.selectedTaskId = null;
-
+        state.selectedTaskId = firstTask?.id ?? null;
         renderAll();
         showPanel("mid");
       };
@@ -952,7 +1170,6 @@
       const meta = document.createElement("div");
       meta.className = "pmeta";
 
-      // name row with rename button
       const nameRow = document.createElement("div");
       nameRow.className = "nameRow";
 
@@ -960,18 +1177,31 @@
       name.className = "pname";
       name.textContent = p.name;
 
+      const tagBtn = document.createElement("button");
+      tagBtn.className = "iconBtn";
+      tagBtn.type = "button";
+      tagBtn.textContent = "🏷";
+      tagBtn.title = "Set category";
+      tagBtn.onclick = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const cur = (p.category || "").trim();
+        const next = prompt("Project category (e.g. Dragon):", cur);
+        if(next === null) return;
+        p.category = next.trim();
+        save();
+        buildCategoryFilter();
+        ensureSelectionsAfterFilter();
+        renderAll();
+      };
+
       const editBtn = document.createElement("button");
       editBtn.className = "iconBtn";
       editBtn.type = "button";
       editBtn.textContent = "✎";
       editBtn.title = "Rename project";
       editBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // select this project before rename (feels consistent)
+        e.preventDefault(); e.stopPropagation();
         state.selectedProjectId = p.id;
-
         beginInlineEdit({
           mountEl: nameRow,
           initialValue: p.name,
@@ -984,7 +1214,17 @@
         });
       };
 
-      nameRow.append(name, editBtn);
+      nameRow.append(name, tagBtn, editBtn);
+
+      const sub = document.createElement("div");
+      sub.className = "psub";
+      const cat = (p.category || "").trim();
+      if(state.selectedPortfolioId === ALL_PORT_ID){
+        const port = state.data.portfolios.find(x => x.id === p.portfolioId);
+        sub.textContent = (cat ? `Category: ${cat} • ` : "") + `Portfolio: ${port?.name || "?"}`;
+      } else {
+        sub.textContent = cat ? `Category: ${cat}` : "Category: —";
+      }
 
       const bar = document.createElement("div");
       bar.className = "pbar";
@@ -993,6 +1233,7 @@
       bar.appendChild(fill);
 
       meta.appendChild(nameRow);
+      meta.appendChild(sub);
       meta.appendChild(bar);
 
       const pct = document.createElement("div");
@@ -1005,7 +1246,7 @@
   }
 
   function taskMatchesFilters(t){
-    if(state.scope === "selected" && t.projectId !== state.selectedProjectId) return false;
+    // search/status
     if(state.statusFilter !== "All" && t.status !== state.statusFilter) return false;
 
     const q = (state.query || "").trim().toLowerCase();
@@ -1013,12 +1254,33 @@
       const hay = (t.title + " " + t.shortDesc + " " + t.stage).toLowerCase();
       if(!hay.includes(q)) return false;
     }
-    return true;
+
+    // scope logic
+    const project = state.data.projects.find(p => p.id === t.projectId);
+    if(!project) return false;
+
+    const projectVisibleByPort = (state.selectedPortfolioId === ALL_PORT_ID) || (project.portfolioId === state.selectedPortfolioId);
+    const projectVisibleByCat = (state.categoryFilter === "all") || ((project.category||"").trim().toLowerCase() === state.categoryFilter);
+
+    if(state.scope === "project"){
+      return t.projectId === state.selectedProjectId;
+    }
+    if(state.scope === "portfolio"){
+      return projectVisibleByPort && projectVisibleByCat;
+    }
+    // "all"
+    return projectVisibleByCat; // category filter still makes sense even in All portfolios
   }
 
   function renderTasksQuick(){
     const list = el("tasksQuick");
     list.innerHTML = "";
+
+    if(!state.selectedProjectId){
+      el("taskCount").textContent = "0";
+      list.innerHTML = `<div class="empty">No project selected.</div>`;
+      return;
+    }
 
     const tasks = state.data.tasks
       .filter(t => t.projectId === state.selectedProjectId)
@@ -1087,7 +1349,7 @@
 
     if(tasks.length === 0){
       cards.innerHTML = `<div class="empty" style="grid-column: 1/-1;">
-        No tasks match your filters/search. Try clearing filters or switching scope.
+        No tasks match your filters/search.
       </div>`;
       return;
     }
@@ -1097,6 +1359,7 @@
       card.className = "card" + (t.id===state.selectedTaskId ? " selected" : "");
       card.onclick = () => {
         state.selectedTaskId = t.id;
+        state.selectedProjectId = t.projectId;
         renderTasksQuick();
         renderCards();
         renderDetail();
@@ -1167,9 +1430,7 @@
 
   function attachDropZoneHandlers(zoneEl, task){
     if(!zoneEl || !task) return;
-
     const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
-
     zoneEl.addEventListener("dragenter", (e)=>{ stop(e); zoneEl.classList.add("dragover"); });
     zoneEl.addEventListener("dragover", (e)=>{ stop(e); zoneEl.classList.add("dragover"); });
     zoneEl.addEventListener("dragleave", (e)=>{ stop(e); zoneEl.classList.remove("dragover"); });
@@ -1183,6 +1444,34 @@
     });
   }
 
+  function applyStatus(t, newStatus){
+    const curProg = clamp(Number(t.progress)||0, 0, 100);
+
+    if(newStatus === "Done"){
+      // store last non-done value
+      t.prevProgress = (curProg >= 100 ? (Number(t.prevProgress)||0) : curProg);
+      t.status = "Done";
+      t.progress = 100;
+    } else if(newStatus === "In Progress"){
+      t.status = "In Progress";
+      if(curProg >= 100){
+        const restored = clamp(Number(t.prevProgress)||50, 0, 99);
+        t.progress = restored > 0 ? restored : 50;
+      } else {
+        // keep current progress, but keep prev updated
+        t.prevProgress = clamp(curProg, 0, 99);
+      }
+    } else { // Not Started
+      t.status = "Not Started";
+      t.prevProgress = 0;
+      t.progress = 0;
+    }
+
+    t.updatedAt = Date.now();
+    save();
+    renderAll();
+  }
+
   function renderDetail(){
     const root = el("detail");
     const t = getSelectedTask();
@@ -1192,7 +1481,8 @@
       return;
     }
 
-    const p = state.data.projects.find(p => p.id === t.projectId);
+    const project = state.data.projects.find(p => p.id === t.projectId);
+    const portfolio = project ? state.data.portfolios.find(x => x.id === project.portfolioId) : null;
 
     const statusChipClass = statusToChipClass(t.status);
     const heroUrl = t.images?.[t.heroIndex||0] || placeholderSvg(t.stage);
@@ -1202,7 +1492,7 @@
       <div>
         <div class="row" style="align-items:flex-start; justify-content:space-between; flex-wrap:nowrap;">
           <div id="taskTitleMount" style="flex:1; min-width:0;">
-            <div class="detailTitle" id="taskTitleText">${escapeHtml(t.title)}</div>
+            <div class="detailTitle">${escapeHtml(t.title)}</div>
           </div>
           <button class="iconBtn" id="btnRenameTask" type="button" title="Rename task">✎</button>
         </div>
@@ -1210,7 +1500,8 @@
         <div class="metaLine">
           <span class="pillSmall stage">${escapeHtml(t.stage)}</span>
           <span class="chip ${statusChipClass}">${escapeHtml(t.status)}</span>
-          <span class="pillSmall">${escapeHtml(p?.name || "Unknown project")}</span>
+          <span class="pillSmall">${escapeHtml(project?.name || "Unknown project")}</span>
+          <span class="pillSmall">${escapeHtml(portfolio?.name || "Unknown portfolio")}</span>
           <span style="font-family:var(--mono); color:var(--muted2);">Updated: ${new Date(t.updatedAt||Date.now()).toLocaleString()}</span>
         </div>
 
@@ -1218,7 +1509,7 @@
           <h3>Images</h3>
 
           <div class="dropZone imgHero" id="dropZone">
-            <img id="heroImg" alt="" src="${heroUrl}">
+            <img alt="" src="${heroUrl}">
             <div class="dropHint">Drop images here (desktop) or use Upload • Multiple allowed</div>
           </div>
 
@@ -1240,16 +1531,15 @@
           <textarea id="desc">${escapeHtml(t.description || "")}</textarea>
           <div class="row" style="margin-top:10px;">
             <button class="btn" id="btnSaveDesc">Save</button>
-            <span style="color:var(--muted2); font-size:12px;">Tip: keep brief notes + next action.</span>
           </div>
         </div>
 
         <div class="section">
           <h3>Status & progress</h3>
           <div class="row">
-            <button class="btn ghost" data-status="Not Started">Not Started</button>
-            <button class="btn ghost" data-status="In Progress">In Progress</button>
-            <button class="btn ghost" data-status="Done">Done</button>
+            <button class="btn ghost" id="sNS">Not Started</button>
+            <button class="btn ghost" id="sIP">In Progress</button>
+            <button class="btn ghost" id="sDN">Done</button>
           </div>
           <div class="row" style="margin-top:10px;">
             <div style="flex:1; min-width:200px;">
@@ -1267,29 +1557,14 @@
             <input id="fileUrl" placeholder="URL (Drive, Dropbox, etc.)" style="flex:1; min-width:180px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:var(--text); padding:10px 12px; outline:none;">
             <button class="btn" id="btnAddFile">Add</button>
           </div>
-          <div style="margin-top:8px; color:var(--muted2); font-size:12px;">
-            Use links because GitHub Pages can’t store uploads server-side.
-          </div>
-        </div>
-
-        <div class="section">
-          <h3>Comments</h3>
-          <textarea id="commentBox" placeholder="Add a comment / next steps…"></textarea>
-          <div class="row" style="margin-top:10px;">
-            <button class="btn ghost" id="btnAddComment">Add comment</button>
-            <span style="color:var(--muted2); font-size:12px;">(Stored in description footer for simplicity.)</span>
-          </div>
         </div>
       </div>
     `;
 
-    // rename task inline
     el("btnRenameTask").onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const mount = el("taskTitleMount");
+      e.preventDefault(); e.stopPropagation();
       beginInlineEdit({
-        mountEl: mount,
+        mountEl: el("taskTitleMount"),
         initialValue: t.title,
         onSave: (val) => {
           t.title = val;
@@ -1323,13 +1598,30 @@
       thumbsEl.appendChild(d);
     });
 
-    // drag/drop zone handlers
     attachDropZoneHandlers(el("dropZone"), t);
+
+    // image upload
+    el("imgUpload").onchange = async (e) => {
+      const files = e.target.files;
+      if(!files || !files.length) return;
+      await addImagesToTask(t, files);
+      e.target.value = "";
+    };
+
+    el("btnRemoveImg").onclick = () => {
+      if(!t.images || t.images.length === 0) return;
+      const idx = t.heroIndex || 0;
+      t.images.splice(idx, 1);
+      t.heroIndex = 0;
+      t.updatedAt = Date.now();
+      save();
+      renderAll();
+    };
 
     // files
     renderFilesList(t);
 
-    // description save
+    // desc save
     el("btnSaveDesc").onclick = () => {
       t.description = el("desc").value;
       t.updatedAt = Date.now();
@@ -1338,16 +1630,10 @@
       renderTasksQuick();
     };
 
-    // status buttons
-    root.querySelectorAll("[data-status]").forEach(btn => {
-      btn.onclick = () => {
-        t.status = btn.getAttribute("data-status");
-        if(t.status === "Done") t.progress = 100;
-        t.updatedAt = Date.now();
-        save();
-        renderAll();
-      };
-    });
+    // status buttons (FIXED progress restore)
+    el("sNS").onclick = () => applyStatus(t, "Not Started");
+    el("sIP").onclick = () => applyStatus(t, "In Progress");
+    el("sDN").onclick = () => applyStatus(t, "Done");
 
     // progress slider
     el("prog").oninput = (e) => {
@@ -1355,26 +1641,18 @@
       el("progLabel").textContent = v + "%";
     };
     el("prog").onchange = (e) => {
-      t.progress = Number(e.target.value)||0;
-      t.updatedAt = Date.now();
-      save();
-      renderAll();
-    };
-
-    // image upload (multiple)
-    el("imgUpload").onchange = async (e) => {
-      const files = e.target.files;
-      if(!files || !files.length) return;
-      await addImagesToTask(t, files);
-      e.target.value = "";
-    };
-
-    // remove current hero
-    el("btnRemoveImg").onclick = () => {
-      if(!t.images || t.images.length === 0) return;
-      const idx = t.heroIndex || 0;
-      t.images.splice(idx, 1);
-      t.heroIndex = 0;
+      const v = clamp(Number(e.target.value)||0, 0, 100);
+      t.progress = v;
+      if(v >= 100){
+        t.prevProgress = clamp(Number(t.prevProgress)||0, 0, 99);
+        t.status = "Done";
+      } else if(v <= 0){
+        t.status = "Not Started";
+        t.prevProgress = 0;
+      } else {
+        t.status = "In Progress";
+        t.prevProgress = clamp(v, 0, 99);
+      }
       t.updatedAt = Date.now();
       save();
       renderAll();
@@ -1392,19 +1670,6 @@
       el("fileName").value = "";
       el("fileUrl").value = "";
       renderFilesList(t);
-      renderCards();
-      renderTasksQuick();
-    };
-
-    // add comment append
-    el("btnAddComment").onclick = () => {
-      const c = el("commentBox").value.trim();
-      if(!c) return;
-      const stamp = new Date().toLocaleString();
-      t.description = (t.description || "") + `\n\n[${stamp}] ${c}`;
-      t.updatedAt = Date.now();
-      save();
-      renderDetail();
       renderCards();
       renderTasksQuick();
     };
@@ -1465,7 +1730,6 @@
       };
 
       right.append(a, del);
-
       item.append(left, right);
       list.appendChild(item);
     });
@@ -1473,13 +1737,19 @@
 
   // Actions
   el("btnNewProject").onclick = () => {
+    if(state.selectedPortfolioId === ALL_PORT_ID){
+      alert("Select a portfolio (not 'All') to create a project in.");
+      return;
+    }
     const name = prompt("Project name?");
     if(!name) return;
-    const p = { id: uid("p"), name: name.trim(), progress: 0 };
+    const cat = prompt("Category? (optional, e.g. Dragon)", "") ?? "";
+    const p = { id: uid("p"), portfolioId: state.selectedPortfolioId, name: name.trim(), category: cat.trim(), progress: 0 };
     state.data.projects.unshift(p);
     state.selectedProjectId = p.id;
     state.selectedTaskId = null;
     save();
+    buildCategoryFilter();
     renderAll();
     showPanel("left");
   };
@@ -1488,26 +1758,28 @@
     const pid = state.selectedProjectId;
     const proj = state.data.projects.find(p => p.id === pid);
     if(!proj) return alert("No project selected.");
+
     const countTasks = state.data.tasks.filter(t => t.projectId === pid).length;
     if(!confirm(`Delete project "${proj.name}" and its ${countTasks} task(s)?`)) return;
 
     state.data.projects = state.data.projects.filter(p => p.id !== pid);
     state.data.tasks = state.data.tasks.filter(t => t.projectId !== pid);
 
-    state.selectedProjectId = state.data.projects[0]?.id || null;
+    state.selectedProjectId = firstVisibleProject()?.id || null;
     state.selectedTaskId =
       state.data.tasks.find(t => t.projectId === state.selectedProjectId)?.id
-      || state.data.tasks[0]?.id
+      || firstVisibleTask()?.id
       || null;
 
     save();
+    buildCategoryFilter();
     renderAll();
     showPanel("mid");
   };
 
   el("btnNewTask").onclick = () => {
-    const projectId = state.selectedProjectId || state.data.projects[0]?.id;
-    if(!projectId) return alert("Create a project first.");
+    const projectId = state.selectedProjectId;
+    if(!projectId) return alert("Select a project first.");
     const title = prompt("Task title?");
     if(!title) return;
     const stage = prompt("Stage (Concept, AI Model, 3D Model, UV, Texture, Rig/Pose, Render)?", "3D Model") || "3D Model";
@@ -1522,6 +1794,7 @@
       shortDesc: shortDesc.trim(),
       status: "Not Started",
       progress: 0,
+      prevProgress: 0,
       updatedAt: Date.now(),
       description: shortDesc.trim(),
       images: [ placeholderSvg(safeStage) ],
@@ -1553,10 +1826,10 @@
     if(!t) return;
     if(!confirm("Delete this task?")) return;
     state.data.tasks = state.data.tasks.filter(x => x.id !== t.id);
-    state.selectedTaskId =
-      state.data.tasks.find(x => x.projectId === state.selectedProjectId)?.id
-      || state.data.tasks[0]?.id
-      || null;
+
+    const firstTask = state.data.tasks.find(x => x.projectId === state.selectedProjectId);
+    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
+
     save();
     renderAll();
   };
@@ -1582,14 +1855,17 @@
       if(!file) return;
       try{
         const text = await file.text();
-        const json = JSON.parse(text);
-        if(!json.projects || !json.tasks) throw new Error("Invalid format");
+        const json = migrateData(JSON.parse(text));
+        if(!json.projects || !json.tasks || !json.portfolios) throw new Error("Invalid format");
         state.data = json;
         save();
-        state.selectedProjectId = state.data.projects[0]?.id || null;
-        state.selectedTaskId = state.data.tasks.find(t=>t.projectId===state.selectedProjectId)?.id || state.data.tasks[0]?.id || null;
-        buildStatusFilters();
-        buildProjectScopeSelect();
+
+        // reset view to default
+        state.selectedPortfolioId = DEFAULT_PORT_ID;
+        state.categoryFilter = "all";
+        buildPortfolioSelect();
+        buildCategoryFilter();
+        ensureSelectionsAfterFilter();
         renderAll();
         alert("Imported!");
       }catch(e){
@@ -1602,12 +1878,14 @@
   el("btnReset").onclick = () => {
     if(!confirm("Reset ALL data on this device?")) return;
     localStorage.removeItem(STORAGE_KEY);
+    state.selectedPortfolioId = DEFAULT_PORT_ID;
+    state.categoryFilter = "all";
     state.selectedProjectId = null;
     state.selectedTaskId = null;
     state.statusFilter = "All";
     state.sortBy = "updated";
     state.query = "";
-    state.scope = "selected";
+    state.scope = "project";
     load();
   };
 
@@ -1626,7 +1904,6 @@
     const left = el("leftPanel");
     const mid = el("midPanel");
     const right = el("rightPanel");
-
     if(window.matchMedia("(min-width: 821px)").matches) return;
 
     left.classList.remove("show");
@@ -1640,19 +1917,6 @@
   el("btnShowLeft").onclick = () => showPanel("left");
   el("btnShowMid").onclick = () => showPanel("mid");
   el("btnShowRight").onclick = () => showPanel("right");
-
-  // Helpers
-  function escapeHtml(s){
-    return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-  function fileToDataURL(file){
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = reject;
-      r.readAsDataURL(file);
-    });
-  }
 
   // Kickoff
   load();
