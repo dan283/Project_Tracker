@@ -85,7 +85,6 @@
     }
     .pill select{ width:auto; cursor:pointer; }
 
-    /* Fix readability for selects (portfolio & scope etc.) */
     select{
       color: var(--text);
       background: rgba(0,0,0,.18);
@@ -108,7 +107,7 @@
       font-weight: 700;
       color: var(--text);
       background: linear-gradient(135deg, rgba(242,140,40,.28), rgba(255,255,255,.06));
-      transition: transform .08s ease, filter .15s ease;
+      transition: transform .08s ease, filter .15s ease, opacity .15s ease;
       user-select:none;
     }
     .btn:hover{ filter: brightness(1.08); }
@@ -118,6 +117,7 @@
       font-weight: 650;
     }
     .btn.danger{ background: rgba(255,106,106,.16); }
+    .btn:disabled{ opacity:.45; cursor:not-allowed; filter:none; transform:none; }
 
     main{ padding: 14px; }
     .layout{
@@ -153,19 +153,9 @@
       text-transform: uppercase;
       color: var(--muted);
     }
-    .panelBody{
-      padding: 10px;
-      height: 100%;
-      min-height: 0;
-    }
+    .panelBody{ padding: 10px; height: 100%; min-height: 0; }
 
-    .stack{
-      display:flex;
-      flex-direction:column;
-      gap: 10px;
-      height:100%;
-      min-height:0;
-    }
+    .stack{ display:flex; flex-direction:column; gap: 10px; height:100%; min-height:0; }
     .block{
       background: rgba(0,0,0,.10);
       border: 1px solid var(--line);
@@ -185,11 +175,7 @@
       background: rgba(255,255,255,.02);
       gap: 10px;
     }
-    .blockScroll{
-      padding: 8px;
-      overflow:auto;
-      min-height:0;
-    }
+    .blockScroll{ padding: 8px; overflow:auto; min-height:0; }
 
     .projectItem{
       display:flex; gap:10px; align-items:flex-start;
@@ -661,16 +647,8 @@
         </div>
 
         <button class="btn" id="btnNewTask">+ New Task</button>
-
         <button class="btn ghost" id="btnExport">Export</button>
         <button class="btn ghost" id="btnImport">Import</button>
-
-        <button class="btn ghost" id="btnLinkJson" title="Link a shared JSON file for auto-update">Link JSON</button>
-        <label class="pill" style="min-height:40px; padding:10px 12px;" title="If enabled and a file is linked, the app will re-read the linked JSON on every reload.">
-          <span style="color:var(--muted2);font-weight:900;">Auto update</span>
-          <input id="chkAutoUpdate" type="checkbox" style="width:auto; cursor:pointer;" />
-        </label>
-
         <button class="btn danger" id="btnReset" title="Clears local data on this device">Reset</button>
       </div>
     </div>
@@ -684,6 +662,7 @@
         <div class="title">Workspace</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
           <button class="btn ghost" id="btnNewProject">+ Project</button>
+          <button class="btn ghost" id="btnPasteTasks" title="Paste copied task(s) into the selected project">Paste tasks</button>
           <button class="btn danger" id="btnDeleteProject" title="Deletes selected project and all its tasks">Delete project</button>
         </div>
       </div>
@@ -737,6 +716,7 @@
       <div class="panelHead">
         <div class="title">Task details</div>
         <div style="display:flex; gap:8px;">
+          <button class="btn ghost" id="btnCopyTask" title="Copy this task (then select another project and Paste tasks)">Copy</button>
           <button class="btn ghost" id="btnDuplicate">Duplicate</button>
           <button class="btn danger" id="btnDeleteTask">Delete</button>
         </div>
@@ -748,8 +728,28 @@
 </main>
 
 <script>
-(async () => {
+(() => {
+  /*********************************************************************
+   * FIX FOR “MERGE THEN REFRESH LOSES TASKS” (even with auto-update OFF)
+   *
+   * Root cause in this app: tasks/images are stored as base64 strings.
+   * That quickly exceeds localStorage quota (usually ~5MB). When that
+   * happens, localStorage.setItem throws QuotaExceededError and the new
+   * merged state is NOT persisted. After refresh you load the older saved
+   * copy, so “moved” tasks appear to vanish.
+   *
+   * Fix: persist the whole dataset in IndexedDB (much larger capacity),
+   * and use localStorage only as a fallback.
+   *********************************************************************/
+
+  // Old localStorage key (kept for backwards compatibility / migration)
   const STORAGE_KEY = "pt_v4_jpeg_compress_select_fix";
+
+  // New IndexedDB storage (primary)
+  const DB_NAME = "pt_store_v1";
+  const DB_VER = 1;
+  const STORE = "kv";
+  const KEY_DATA = "data";
 
   const STAGES = ["Concept","AI Model","3D Model","UV","Texture","Rig/Pose","Render"];
   const STATUS = ["Not Started","In Progress","Done"];
@@ -757,12 +757,7 @@
   const DEFAULT_PORT_ID = "port_default";
   const ALL_PORT_ID = "port_all";
 
-  // Image compression defaults (Option A)
-  const IMG = {
-    quality: 0.82,              // inside 0.75–0.85 requested
-    maxEdge: 2048,              // resize big images (major savings)
-    mime: "image/jpeg"          // re-encode to JPEG
-  };
+  const IMG = { quality: 0.82, maxEdge: 2048, mime: "image/jpeg" };
 
   const el = (id) => document.getElementById(id);
 
@@ -774,14 +769,16 @@
     statusFilter: "All",
     sortBy: "updated",
     query: "",
-    scope: "project", // project | portfolio | all
+    scope: "project",
     categoryFilter: "all",
+    clipboardTasks: [],
   };
 
   function uid(prefix="id"){
     return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
   }
   function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+  function norm(s){ return String(s||"").trim().toLowerCase(); }
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -848,6 +845,8 @@
   }
 
   function migrateData(d){
+    if(!d || typeof d !== "object") d = defaultData();
+
     if(!d.portfolios){
       d.portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
     }
@@ -855,246 +854,176 @@
       d.portfolios.unshift({ id: DEFAULT_PORT_ID, name: "Default" });
     }
 
-    (d.projects || []).forEach(p => {
+    d.projects = Array.isArray(d.projects) ? d.projects : [];
+    d.tasks = Array.isArray(d.tasks) ? d.tasks : [];
+
+    d.projects.forEach(p => {
       if(!p.portfolioId) p.portfolioId = DEFAULT_PORT_ID;
       if(typeof p.category !== "string") p.category = "";
+      if(typeof p.name !== "string") p.name = "Project";
     });
 
-    (d.tasks || []).forEach(t => {
+    d.tasks.forEach(t => {
       if(typeof t.prevProgress !== "number") t.prevProgress = Number(t.progress) || 0;
       if(!Array.isArray(t.images)) t.images = [];
       if(!Array.isArray(t.files)) t.files = [];
       if(typeof t.heroIndex !== "number") t.heroIndex = 0;
+      if(typeof t.projectId !== "string") t.projectId = "";
+      if(typeof t.title !== "string") t.title = "Task";
+      if(typeof t.stage !== "string" || !STAGES.includes(t.stage)) t.stage = "3D Model";
+      if(typeof t.status !== "string" || !STATUS.includes(t.status)) t.status = "Not Started";
+      if(typeof t.progress !== "number") t.progress = Number(t.progress) || 0;
+      if(typeof t.updatedAt !== "number") t.updatedAt = Date.now();
     });
 
     return d;
   }
 
-  function load(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw){
-        state.data = defaultData();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-      }else{
-        state.data = migrateData(JSON.parse(raw));
-      }
-    }catch(e){
-      state.data = defaultData();
-    }
-
-    if(!state.data.portfolios.find(p => p.id === state.selectedPortfolioId) && state.selectedPortfolioId !== ALL_PORT_ID){
-      state.selectedPortfolioId = DEFAULT_PORT_ID;
-    }
-
-    if(!state.selectedProjectId){
-      state.selectedProjectId = firstVisibleProject()?.id ?? null;
-    }
-    if(state.selectedProjectId && !state.data.projects.find(p=>p.id===state.selectedProjectId)){
-      state.selectedProjectId = firstVisibleProject()?.id ?? null;
-    }
-
-    const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
-    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
-
-    buildPortfolioSelect();
-    buildScopeSelect();
-    buildStatusFilters();
-    buildCategoryFilter();
-    renderAll();
-  }
-
-  function save(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-  }
-
-  // ---------- File link + auto-update (shared JSON) ----------
-  const FILE_SYNC_KEY = "pt_file_sync_v1"; // settings only
-  const IDB_DB = "pt_file_sync_db";
-  const IDB_STORE = "handles";
-  const IDB_KEY = "linked_json_handle";
-
-  const fileSync = {
-    enabled: false,
-    linkedName: "",
-    lastHash: ""
-  };
-
-  function loadFileSyncSettings(){
-    try{
-      const raw = localStorage.getItem(FILE_SYNC_KEY);
-      if(!raw) return;
-      const s = JSON.parse(raw);
-      fileSync.enabled = !!s.enabled;
-      fileSync.linkedName = String(s.linkedName || "");
-      fileSync.lastHash = String(s.lastHash || "");
-    }catch(_){}
-  }
-
-  function saveFileSyncSettings(){
-    try{
-      localStorage.setItem(FILE_SYNC_KEY, JSON.stringify({
-        enabled: fileSync.enabled,
-        linkedName: fileSync.linkedName,
-        lastHash: fileSync.lastHash
-      }));
-    }catch(_){}
-  }
-
-  function openIdb(){
+  // ---------------- IndexedDB helpers ----------------
+  function openDb(){
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open(IDB_DB, 1);
+      const req = indexedDB.open(DB_NAME, DB_VER);
       req.onupgradeneeded = () => {
         const db = req.result;
-        if(!db.objectStoreNames.contains(IDB_STORE)){
-          db.createObjectStore(IDB_STORE);
+        if(!db.objectStoreNames.contains(STORE)){
+          db.createObjectStore(STORE);
         }
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
   }
-
-  async function idbSet(key, value){
-    const db = await openIdb();
+  async function idbGet(key){
+    const db = await openDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, "readwrite");
-      tx.objectStore(IDB_STORE).put(value, key);
+      const tx = db.transaction(STORE, "readonly");
+      const st = tx.objectStore(STORE);
+      const r = st.get(key);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+  }
+  async function idbSet(key, value){
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(value, key);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
   }
-
-  async function idbGet(key){
-    const db = await openIdb();
+  async function idbDel(key){
+    const db = await openDb();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, "readonly");
-      const req = tx.objectStore(IDB_STORE).get(key);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
     });
   }
+  // ---------------------------------------------------
 
-  async function sha256Hex(text){
-    const enc = new TextEncoder().encode(text);
-    const buf = await crypto.subtle.digest("SHA-256", enc);
-    const arr = Array.from(new Uint8Array(buf));
-    return arr.map(b => b.toString(16).padStart(2,"0")).join("");
+  // Debounced save to avoid hammering IDB during slider drags etc.
+  let saveTimer = null;
+  let saveInFlight = Promise.resolve();
+
+  function scheduleSave(){
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { saveNow(); }, 120);
   }
 
-  function trySave(){
+  function saveNow(){
+    const snapshot = state.data;
+    if(!snapshot) return Promise.resolve();
+
+    // chain so we keep write order
+    saveInFlight = saveInFlight.then(async () => {
+      // Primary: IndexedDB (large capacity)
+      try{
+        await idbSet(KEY_DATA, snapshot);
+      }catch(e){
+        console.warn("IndexedDB save failed:", e);
+        alert("Save failed (IndexedDB). Your changes may not persist after refresh.\n\n" + (e.message || e));
+      }
+
+      // Secondary: localStorage best-effort fallback (may fail due quota)
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+      }catch(e){
+        // expected sometimes when images are big; IDB is still the real storage now
+        console.warn("localStorage save failed (expected if images are large):", e);
+      }
+    });
+
+    return saveInFlight;
+  }
+
+  async function loadDataFromStorage(){
+    // 1) Try IndexedDB
     try{
-      save();
-      return { ok:true };
+      const d = await idbGet(KEY_DATA);
+      if(d) return migrateData(d);
     }catch(e){
-      console.warn("Save failed (likely quota exceeded):", e);
-      return { ok:false, error:e };
+      console.warn("IndexedDB read failed:", e);
+    }
+
+    // 2) Fallback localStorage
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return migrateData(JSON.parse(raw));
+    }catch(e){
+      console.warn("localStorage read failed:", e);
+    }
+
+    // 3) Default
+    const d = migrateData(defaultData());
+    // persist default so next load is consistent
+    try{ await idbSet(KEY_DATA, d); }catch(_){}
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }catch(_){}
+    return d;
+  }
+
+  // ---------------- Clipboard tasks ----------------
+  function updateClipboardUI(){
+    const has = Array.isArray(state.clipboardTasks) && state.clipboardTasks.length > 0;
+    const pasteBtn = el("btnPasteTasks");
+    if(pasteBtn){
+      pasteBtn.disabled = !has || !state.selectedProjectId;
+      pasteBtn.textContent = has ? `Paste tasks (${state.clipboardTasks.length})` : "Paste tasks";
     }
   }
+  function getSelectedTask(){
+    return state.data.tasks.find(t => t.id === state.selectedTaskId) || null;
+  }
+  function copySelectedTaskToClipboard(){
+    const t = getSelectedTask();
+    if(!t) return;
+    state.clipboardTasks = [JSON.parse(JSON.stringify(t))];
+    updateClipboardUI();
+    alert("Task copied. Select a project then click Paste tasks.");
+  }
+  function pasteClipboardTasksIntoProject(targetProjectId){
+    if(!targetProjectId) return alert("Select a target project first.");
+    if(!state.clipboardTasks || state.clipboardTasks.length === 0) return alert("Clipboard is empty. Copy a task first.");
 
-  function applyImportedData(json, {showAlert=true} = {}){
-    state.data = migrateData(json);
+    const now = Date.now();
+    const pasted = state.clipboardTasks.map(src => {
+      const c = JSON.parse(JSON.stringify(src));
+      c.id = uid("t");
+      c.projectId = targetProjectId;
+      c.updatedAt = now;
+      return c;
+    });
 
-    // Show everything after import so user doesn't "miss" their data
-    state.selectedPortfolioId = ALL_PORT_ID;
-    state.categoryFilter = "all";
-    state.statusFilter = "All";
-    state.query = "";
-    state.scope = "project";
+    state.data.tasks.unshift(...pasted);
+    state.selectedProjectId = targetProjectId;
+    state.selectedTaskId = pasted[0]?.id ?? state.selectedTaskId;
 
-    ensureSelectionsAfterFilter();
-    buildPortfolioSelect();
-    buildCategoryFilter();
-    buildStatusFilters();
-    buildScopeSelect();
+    scheduleSave();
     renderAll();
-
-    const r = trySave();
-    if(!r.ok){
-      if(showAlert){
-        alert(
-          "Imported into memory, but could NOT save to localStorage (likely browser storage quota exceeded due to embedded images).\n\n" +
-          "Your data will disappear on reload unless you use the linked JSON file workflow.\n\n" +
-          "Details: " + (r.error?.name || r.error)
-        );
-      }
-    }else{
-      if(showAlert) alert("Imported!");
-    }
+    showPanel("right");
   }
-
-  async function readLinkedFileAndApply({silent=false} = {}){
-    let handle;
-    try{
-      handle = await idbGet(IDB_KEY);
-    }catch(e){
-      console.warn("Failed to read linked handle from IDB:", e);
-      return;
-    }
-    if(!handle) return;
-
-    try{
-      const perm = await handle.queryPermission?.({mode:"read"}) ?? "granted";
-      if(perm !== "granted"){
-        const req = await handle.requestPermission?.({mode:"read"});
-        if(req !== "granted"){
-          if(!silent) alert("Auto update is enabled, but file permission was not granted.");
-          return;
-        }
-      }
-
-      const file = await handle.getFile();
-      const text = await file.text();
-      const hash = await sha256Hex(text);
-
-      if(hash === fileSync.lastHash){
-        return;
-      }
-
-      const json = JSON.parse(text);
-      if(!json || !json.projects || !json.tasks) throw new Error("Invalid JSON format");
-
-      fileSync.lastHash = hash;
-      fileSync.linkedName = file.name || fileSync.linkedName;
-      saveFileSyncSettings();
-
-      applyImportedData(json, {showAlert: !silent});
-    }catch(e){
-      console.warn("Auto-update read failed:", e);
-      if(!silent){
-        alert("Auto update failed to read/parse linked file:\n" + (e.message || e));
-      }
-    }
-  }
-
-  async function linkJsonFile(){
-    if(!window.showOpenFilePicker){
-      alert("Your browser doesn't support linking a file (File System Access API). Use Import instead.");
-      return;
-    }
-    try{
-      const [handle] = await window.showOpenFilePicker({
-        multiple: false,
-        types: [{ description: "JSON", accept: {"application/json":[".json"]} }]
-      });
-      if(!handle) return;
-
-      await idbSet(IDB_KEY, handle);
-
-      const file = await handle.getFile();
-      fileSync.linkedName = file.name || "";
-      fileSync.enabled = true;
-      fileSync.lastHash = ""; // force refresh
-      saveFileSyncSettings();
-
-      el("chkAutoUpdate").checked = true;
-      await readLinkedFileAndApply({silent:false});
-    }catch(e){
-      if(e?.name === "AbortError") return;
-      alert("Link JSON failed: " + (e.message || e));
-    }
-  }
-  // ---------- end File link + auto-update ----------
+  // ------------------------------------------------
 
   function beginInlineEdit({ mountEl, initialValue, onSave, onCancel }){
     const input = document.createElement("input");
@@ -1102,12 +1031,20 @@
     input.value = initialValue ?? "";
     input.setAttribute("aria-label", "Rename");
 
+    let finished = false;
+
     const finishSave = () => {
+      if(finished) return;
+      finished = true;
       const v = input.value.trim();
       if(v) onSave(v);
       else onCancel?.();
     };
-    const finishCancel = () => onCancel?.();
+    const finishCancel = () => {
+      if(finished) return;
+      finished = true;
+      onCancel?.();
+    };
 
     input.addEventListener("keydown", (e) => {
       if(e.key === "Enter") finishSave();
@@ -1151,17 +1088,27 @@
     return projs;
   }
 
-  function firstVisibleProject(){
-    return visibleProjects()[0] || null;
-  }
-
-  function visibleProjectIdsSet(){
-    return new Set(visibleProjects().map(p => p.id));
-  }
-
+  function firstVisibleProject(){ return visibleProjects()[0] || null; }
+  function visibleProjectIdsSet(){ return new Set(visibleProjects().map(p => p.id)); }
   function firstVisibleTask(){
     const projIds = visibleProjectIdsSet();
     return state.data.tasks.find(t => projIds.has(t.projectId)) || null;
+  }
+
+  function ensureSelectionsAfterFilter(){
+    const vis = visibleProjects();
+    if(vis.length === 0){
+      state.selectedProjectId = null;
+      state.selectedTaskId = null;
+      updateClipboardUI();
+      return;
+    }
+    if(!vis.find(p => p.id === state.selectedProjectId)){
+      state.selectedProjectId = vis[0].id;
+    }
+    const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
+    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
+    updateClipboardUI();
   }
 
   function buildPortfolioSelect(){
@@ -1197,7 +1144,7 @@
           state.data.portfolios.push(np);
           state.selectedPortfolioId = np.id;
           state.categoryFilter = "all";
-          trySave();
+          scheduleSave();
         }
         buildPortfolioSelect();
         buildCategoryFilter();
@@ -1216,7 +1163,7 @@
             const name = prompt("Rename portfolio:", port.name);
             if(name){
               port.name = name.trim();
-              trySave();
+              scheduleSave();
             }
           }
         }
@@ -1245,7 +1192,7 @@
 
             state.selectedPortfolioId = DEFAULT_PORT_ID;
             state.categoryFilter = "all";
-            trySave();
+            scheduleSave();
           }
         }
         buildPortfolioSelect();
@@ -1303,20 +1250,6 @@
     };
   }
 
-  function ensureSelectionsAfterFilter(){
-    const vis = visibleProjects();
-    if(vis.length === 0){
-      state.selectedProjectId = null;
-      state.selectedTaskId = null;
-      return;
-    }
-    if(!vis.find(p => p.id === state.selectedProjectId)){
-      state.selectedProjectId = vis[0].id;
-    }
-    const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
-    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
-  }
-
   function buildStatusFilters(){
     const wrap = el("statusFilters");
     wrap.innerHTML = "";
@@ -1339,6 +1272,68 @@
     renderTasksQuick();
     renderCards();
     renderDetail();
+    updateClipboardUI();
+  }
+
+  // ✅ Merge fix (logic) + ✅ persistence fix (IndexedDB)
+  function renameProjectOrMerge(projectId, newName){
+    const proj = state.data.projects.find(p => p.id === projectId);
+    if(!proj) return;
+
+    const newNameNorm = norm(newName);
+    if(!newNameNorm) return;
+
+    const samePortfolioId = proj.portfolioId;
+    const projCatNorm = norm(proj.category);
+
+    const existing = state.data.projects.find(p =>
+      p.id !== proj.id &&
+      p.portfolioId === samePortfolioId &&
+      norm(p.category) === projCatNorm &&
+      norm(p.name) === newNameNorm
+    );
+
+    if(existing){
+      const fromId = proj.id;
+      const toId = existing.id;
+
+      let movedCount = 0;
+      for(const t of state.data.tasks){
+        if(t.projectId === fromId){
+          t.projectId = toId;
+          t.updatedAt = Date.now();
+          movedCount++;
+        }
+      }
+
+      // remove old project
+      state.data.projects = state.data.projects.filter(p => p.id !== fromId);
+
+      // keep UI sane
+      state.categoryFilter = "all";
+      if(state.selectedPortfolioId !== ALL_PORT_ID && state.selectedPortfolioId !== samePortfolioId){
+        state.selectedPortfolioId = samePortfolioId;
+      }
+
+      state.selectedProjectId = toId;
+      const newest = state.data.tasks
+        .filter(t => t.projectId === toId)
+        .sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0))[0];
+      state.selectedTaskId = newest?.id ?? state.selectedTaskId;
+
+      scheduleSave();
+      buildPortfolioSelect();
+      buildCategoryFilter();
+      ensureSelectionsAfterFilter();
+      renderAll();
+
+      alert(`Merged into "${existing.name}" (${movedCount} task(s) moved).`);
+      return;
+    }
+
+    proj.name = newName.trim();
+    scheduleSave();
+    renderAll();
   }
 
   function renderProjects(){
@@ -1388,7 +1383,7 @@
         const next = prompt("Project category (e.g. Dragon):", cur);
         if(next === null) return;
         p.category = next.trim();
-        trySave();
+        scheduleSave();
         buildCategoryFilter();
         ensureSelectionsAfterFilter();
         renderAll();
@@ -1398,18 +1393,14 @@
       editBtn.className = "iconBtn";
       editBtn.type = "button";
       editBtn.textContent = "✎";
-      editBtn.title = "Rename project";
+      editBtn.title = "Rename project (merges if same name + same category exists)";
       editBtn.onclick = (e) => {
         e.preventDefault(); e.stopPropagation();
         state.selectedProjectId = p.id;
         beginInlineEdit({
           mountEl: nameRow,
           initialValue: p.name,
-          onSave: (val) => {
-            p.name = val;
-            trySave();
-            renderAll();
-          },
+          onSave: (val) => renameProjectOrMerge(p.id, val),
           onCancel: () => renderProjects()
         });
       };
@@ -1460,12 +1451,8 @@
     const projectVisibleByPort = (state.selectedPortfolioId === ALL_PORT_ID) || (project.portfolioId === state.selectedPortfolioId);
     const projectVisibleByCat = (state.categoryFilter === "all") || ((project.category||"").trim().toLowerCase() === state.categoryFilter);
 
-    if(state.scope === "project"){
-      return t.projectId === state.selectedProjectId;
-    }
-    if(state.scope === "portfolio"){
-      return projectVisibleByPort && projectVisibleByCat;
-    }
+    if(state.scope === "project") return t.projectId === state.selectedProjectId;
+    if(state.scope === "portfolio") return projectVisibleByPort && projectVisibleByCat;
     return projectVisibleByCat;
   }
 
@@ -1604,11 +1591,7 @@
     });
   }
 
-  function getSelectedTask(){
-    return state.data.tasks.find(t => t.id === state.selectedTaskId) || null;
-  }
-
-  // --- JPEG re-encode utilities (Option A) ---
+  // --- JPEG upload helpers ---
   function loadImageFromFile(file){
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
@@ -1618,17 +1601,11 @@
       img.src = url;
     });
   }
-
   function canvasToDataURL(canvas, mime, quality){
-    return new Promise((resolve) => {
-      const url = canvas.toDataURL(mime, quality);
-      resolve(url);
-    });
+    return Promise.resolve(canvas.toDataURL(mime, quality));
   }
-
   async function compressImageFileToJpegDataUrl(file, {maxEdge, quality, mime}){
     const img = await loadImageFromFile(file);
-
     const w = img.naturalWidth || img.width;
     const h = img.naturalHeight || img.height;
 
@@ -1643,36 +1620,12 @@
     const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0,0,outW,outH);
     ctx.drawImage(img, 0, 0, outW, outH);
 
     return await canvasToDataURL(canvas, mime, quality);
   }
-
-  async function addImagesToTask(task, files){
-    const imgs = Array.from(files || []).filter(f => f && f.type && f.type.startsWith("image/"));
-    if(imgs.length === 0) return;
-
-    const dataUrls = [];
-    for(const f of imgs){
-      try{
-        const out = await compressImageFileToJpegDataUrl(f, IMG);
-        dataUrls.push(out);
-      }catch(e){
-        dataUrls.push(await fileToDataURLFallback(f));
-      }
-    }
-
-    task.images = task.images || [];
-    task.images = dataUrls.concat(task.images);
-    task.heroIndex = 0;
-    task.updatedAt = Date.now();
-    trySave();
-    renderAll();
-  }
-
   function fileToDataURLFallback(file){
     return new Promise((resolve, reject) => {
       const r = new FileReader();
@@ -1680,6 +1633,23 @@
       r.onerror = reject;
       r.readAsDataURL(file);
     });
+  }
+  async function addImagesToTask(task, files){
+    const imgs = Array.from(files || []).filter(f => f && f.type && f.type.startsWith("image/"));
+    if(imgs.length === 0) return;
+
+    const dataUrls = [];
+    for(const f of imgs){
+      try{ dataUrls.push(await compressImageFileToJpegDataUrl(f, IMG)); }
+      catch(_){ dataUrls.push(await fileToDataURLFallback(f)); }
+    }
+
+    task.images = task.images || [];
+    task.images = dataUrls.concat(task.images);
+    task.heroIndex = 0;
+    task.updatedAt = Date.now();
+    scheduleSave();
+    renderAll();
   }
 
   function attachDropZoneHandlers(zoneEl, task){
@@ -1720,7 +1690,7 @@
     }
 
     t.updatedAt = Date.now();
-    trySave();
+    scheduleSave();
     renderAll();
   }
 
@@ -1821,7 +1791,7 @@
         onSave: (val) => {
           t.title = val;
           t.updatedAt = Date.now();
-          trySave();
+          scheduleSave();
           renderAll();
         },
         onCancel: () => renderDetail()
@@ -1841,7 +1811,7 @@
       d.onclick = () => {
         t.heroIndex = i;
         t.updatedAt = Date.now();
-        trySave();
+        scheduleSave();
         renderDetail();
         renderCards();
         renderTasksQuick();
@@ -1864,7 +1834,7 @@
       t.images.splice(idx, 1);
       t.heroIndex = 0;
       t.updatedAt = Date.now();
-      trySave();
+      scheduleSave();
       renderAll();
     };
 
@@ -1873,7 +1843,7 @@
     el("btnSaveDesc").onclick = () => {
       t.description = el("desc").value;
       t.updatedAt = Date.now();
-      trySave();
+      scheduleSave();
       renderCards();
       renderTasksQuick();
     };
@@ -1900,7 +1870,7 @@
         t.prevProgress = clamp(v, 0, 99);
       }
       t.updatedAt = Date.now();
-      trySave();
+      scheduleSave();
       renderAll();
     };
 
@@ -1911,7 +1881,7 @@
       t.files = t.files || [];
       t.files.unshift({ name, url });
       t.updatedAt = Date.now();
-      trySave();
+      scheduleSave();
       el("fileName").value = "";
       el("fileUrl").value = "";
       renderFilesList(t);
@@ -1968,7 +1938,7 @@
       del.onclick = () => {
         t.files.splice(i,1);
         t.updatedAt = Date.now();
-        trySave();
+        scheduleSave();
         renderFilesList(t);
         renderCards();
         renderTasksQuick();
@@ -1993,11 +1963,13 @@
     state.data.projects.unshift(p);
     state.selectedProjectId = p.id;
     state.selectedTaskId = null;
-    trySave();
+    scheduleSave();
     buildCategoryFilter();
     renderAll();
     showPanel("left");
   };
+
+  el("btnPasteTasks").onclick = () => pasteClipboardTasksIntoProject(state.selectedProjectId);
 
   el("btnDeleteProject").onclick = () => {
     const pid = state.selectedProjectId;
@@ -2016,7 +1988,7 @@
       || firstVisibleTask()?.id
       || null;
 
-    trySave();
+    scheduleSave();
     buildCategoryFilter();
     renderAll();
     showPanel("mid");
@@ -2048,10 +2020,12 @@
     };
     state.data.tasks.unshift(t);
     state.selectedTaskId = t.id;
-    trySave();
+    scheduleSave();
     renderAll();
     showPanel("right");
   };
+
+  el("btnCopyTask").onclick = () => copySelectedTaskToClipboard();
 
   el("btnDuplicate").onclick = () => {
     const t = getSelectedTask();
@@ -2062,7 +2036,7 @@
     copy.updatedAt = Date.now();
     state.data.tasks.unshift(copy);
     state.selectedTaskId = copy.id;
-    trySave();
+    scheduleSave();
     renderAll();
   };
 
@@ -2075,7 +2049,7 @@
     const firstTask = state.data.tasks.find(x => x.projectId === state.selectedProjectId);
     state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
 
-    trySave();
+    scheduleSave();
     renderAll();
   };
 
@@ -2100,9 +2074,25 @@
       if(!file) return;
       try{
         const text = await file.text();
-        const json = JSON.parse(text);
-        if(!json || !json.projects || !json.tasks) throw new Error("Invalid format");
-        applyImportedData(json, {showAlert:true});
+        const json = migrateData(JSON.parse(text));
+        if(!json.projects || !json.tasks || !json.portfolios) throw new Error("Invalid format");
+
+        state.data = json;
+
+        // Force write to IndexedDB so refresh persists even with huge images
+        await saveNow();
+
+        state.selectedPortfolioId = ALL_PORT_ID;
+        state.categoryFilter = "all";
+        state.selectedProjectId = firstVisibleProject()?.id ?? state.data.projects[0]?.id ?? null;
+        state.selectedTaskId = state.data.tasks.find(t => t.projectId === state.selectedProjectId)?.id ?? state.data.tasks[0]?.id ?? null;
+
+        buildPortfolioSelect();
+        buildCategoryFilter();
+        ensureSelectionsAfterFilter();
+        renderAll();
+
+        alert("Imported!");
       }catch(e){
         alert("Import failed: " + (e.message || e));
       }
@@ -2110,21 +2100,12 @@
     input.click();
   };
 
-  el("btnLinkJson").onclick = async () => {
-    await linkJsonFile();
-  };
-
-  el("chkAutoUpdate").onchange = async (e) => {
-    fileSync.enabled = !!e.target.checked;
-    saveFileSyncSettings();
-    if(fileSync.enabled){
-      await readLinkedFileAndApply({silent:true});
-    }
-  };
-
-  el("btnReset").onclick = () => {
+  el("btnReset").onclick = async () => {
     if(!confirm("Reset ALL data on this device?")) return;
-    localStorage.removeItem(STORAGE_KEY);
+
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+    try{ await idbDel(KEY_DATA); }catch(_){}
+
     state.selectedPortfolioId = DEFAULT_PORT_ID;
     state.categoryFilter = "all";
     state.selectedProjectId = null;
@@ -2133,7 +2114,17 @@
     state.sortBy = "updated";
     state.query = "";
     state.scope = "project";
-    load();
+    state.clipboardTasks = [];
+
+    state.data = migrateData(defaultData());
+    await saveNow();
+
+    buildPortfolioSelect();
+    buildScopeSelect();
+    buildStatusFilters();
+    buildCategoryFilter();
+    ensureSelectionsAfterFilter();
+    renderAll();
   };
 
   // Search & sort
@@ -2165,32 +2156,36 @@
   el("btnShowMid").onclick = () => showPanel("mid");
   el("btnShowRight").onclick = () => showPanel("right");
 
-  async function init(){
-    loadFileSyncSettings();
-
-    el("chkAutoUpdate").checked = fileSync.enabled;
-
-    // If enabled, prefer linked file on startup (multi-user read-on-reload)
-    if(fileSync.enabled){
-      await readLinkedFileAndApply({silent:true});
-    }
-
-    // If linked file didn't load anything, fallback to localStorage
-    if(!state.data){
-      load();
-    }else{
-      buildPortfolioSelect();
-      buildScopeSelect();
-      buildStatusFilters();
-      buildCategoryFilter();
-      ensureSelectionsAfterFilter();
-      renderAll();
-    }
-  }
-
   // init
-  await init();
-  showPanel("mid");
+  (async () => {
+    state.data = await loadDataFromStorage();
+
+    if(!state.data.portfolios.find(p => p.id === state.selectedPortfolioId) && state.selectedPortfolioId !== ALL_PORT_ID){
+      state.selectedPortfolioId = DEFAULT_PORT_ID;
+    }
+
+    if(!state.selectedProjectId){
+      state.selectedProjectId = firstVisibleProject()?.id ?? null;
+    }
+    if(state.selectedProjectId && !state.data.projects.find(p=>p.id===state.selectedProjectId)){
+      state.selectedProjectId = firstVisibleProject()?.id ?? null;
+    }
+
+    const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
+    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
+
+    buildPortfolioSelect();
+    buildScopeSelect();
+    buildStatusFilters();
+    buildCategoryFilter();
+    ensureSelectionsAfterFilter();
+    renderAll();
+    showPanel("mid");
+
+    // Do one immediate save to migrate localStorage-only users into IDB
+    scheduleSave();
+  })();
+
 })();
 </script>
 </body>
