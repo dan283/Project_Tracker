@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -660,8 +661,16 @@
         </div>
 
         <button class="btn" id="btnNewTask">+ New Task</button>
+
         <button class="btn ghost" id="btnExport">Export</button>
         <button class="btn ghost" id="btnImport">Import</button>
+
+        <button class="btn ghost" id="btnLinkJson" title="Link a shared JSON file for auto-update">Link JSON</button>
+        <label class="pill" style="min-height:40px; padding:10px 12px;" title="If enabled and a file is linked, the app will re-read the linked JSON on every reload.">
+          <span style="color:var(--muted2);font-weight:900;">Auto update</span>
+          <input id="chkAutoUpdate" type="checkbox" style="width:auto; cursor:pointer;" />
+        </label>
+
         <button class="btn danger" id="btnReset" title="Clears local data on this device">Reset</button>
       </div>
     </div>
@@ -739,7 +748,7 @@
 </main>
 
 <script>
-(() => {
+(async () => {
   const STORAGE_KEY = "pt_v4_jpeg_compress_select_fix";
 
   const STAGES = ["Concept","AI Model","3D Model","UV","Texture","Rig/Pose","Render"];
@@ -899,6 +908,194 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
   }
 
+  // ---------- File link + auto-update (shared JSON) ----------
+  const FILE_SYNC_KEY = "pt_file_sync_v1"; // settings only
+  const IDB_DB = "pt_file_sync_db";
+  const IDB_STORE = "handles";
+  const IDB_KEY = "linked_json_handle";
+
+  const fileSync = {
+    enabled: false,
+    linkedName: "",
+    lastHash: ""
+  };
+
+  function loadFileSyncSettings(){
+    try{
+      const raw = localStorage.getItem(FILE_SYNC_KEY);
+      if(!raw) return;
+      const s = JSON.parse(raw);
+      fileSync.enabled = !!s.enabled;
+      fileSync.linkedName = String(s.linkedName || "");
+      fileSync.lastHash = String(s.lastHash || "");
+    }catch(_){}
+  }
+
+  function saveFileSyncSettings(){
+    try{
+      localStorage.setItem(FILE_SYNC_KEY, JSON.stringify({
+        enabled: fileSync.enabled,
+        linkedName: fileSync.linkedName,
+        lastHash: fileSync.lastHash
+      }));
+    }catch(_){}
+  }
+
+  function openIdb(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if(!db.objectStoreNames.contains(IDB_STORE)){
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbSet(key, value){
+    const db = await openIdb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function idbGet(key){
+    const db = await openIdb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function sha256Hex(text){
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    const arr = Array.from(new Uint8Array(buf));
+    return arr.map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  function trySave(){
+    try{
+      save();
+      return { ok:true };
+    }catch(e){
+      console.warn("Save failed (likely quota exceeded):", e);
+      return { ok:false, error:e };
+    }
+  }
+
+  function applyImportedData(json, {showAlert=true} = {}){
+    state.data = migrateData(json);
+
+    // Show everything after import so user doesn't "miss" their data
+    state.selectedPortfolioId = ALL_PORT_ID;
+    state.categoryFilter = "all";
+    state.statusFilter = "All";
+    state.query = "";
+    state.scope = "project";
+
+    ensureSelectionsAfterFilter();
+    buildPortfolioSelect();
+    buildCategoryFilter();
+    buildStatusFilters();
+    buildScopeSelect();
+    renderAll();
+
+    const r = trySave();
+    if(!r.ok){
+      if(showAlert){
+        alert(
+          "Imported into memory, but could NOT save to localStorage (likely browser storage quota exceeded due to embedded images).\n\n" +
+          "Your data will disappear on reload unless you use the linked JSON file workflow.\n\n" +
+          "Details: " + (r.error?.name || r.error)
+        );
+      }
+    }else{
+      if(showAlert) alert("Imported!");
+    }
+  }
+
+  async function readLinkedFileAndApply({silent=false} = {}){
+    let handle;
+    try{
+      handle = await idbGet(IDB_KEY);
+    }catch(e){
+      console.warn("Failed to read linked handle from IDB:", e);
+      return;
+    }
+    if(!handle) return;
+
+    try{
+      const perm = await handle.queryPermission?.({mode:"read"}) ?? "granted";
+      if(perm !== "granted"){
+        const req = await handle.requestPermission?.({mode:"read"});
+        if(req !== "granted"){
+          if(!silent) alert("Auto update is enabled, but file permission was not granted.");
+          return;
+        }
+      }
+
+      const file = await handle.getFile();
+      const text = await file.text();
+      const hash = await sha256Hex(text);
+
+      if(hash === fileSync.lastHash){
+        return;
+      }
+
+      const json = JSON.parse(text);
+      if(!json || !json.projects || !json.tasks) throw new Error("Invalid JSON format");
+
+      fileSync.lastHash = hash;
+      fileSync.linkedName = file.name || fileSync.linkedName;
+      saveFileSyncSettings();
+
+      applyImportedData(json, {showAlert: !silent});
+    }catch(e){
+      console.warn("Auto-update read failed:", e);
+      if(!silent){
+        alert("Auto update failed to read/parse linked file:\n" + (e.message || e));
+      }
+    }
+  }
+
+  async function linkJsonFile(){
+    if(!window.showOpenFilePicker){
+      alert("Your browser doesn't support linking a file (File System Access API). Use Import instead.");
+      return;
+    }
+    try{
+      const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [{ description: "JSON", accept: {"application/json":[".json"]} }]
+      });
+      if(!handle) return;
+
+      await idbSet(IDB_KEY, handle);
+
+      const file = await handle.getFile();
+      fileSync.linkedName = file.name || "";
+      fileSync.enabled = true;
+      fileSync.lastHash = ""; // force refresh
+      saveFileSyncSettings();
+
+      el("chkAutoUpdate").checked = true;
+      await readLinkedFileAndApply({silent:false});
+    }catch(e){
+      if(e?.name === "AbortError") return;
+      alert("Link JSON failed: " + (e.message || e));
+    }
+  }
+  // ---------- end File link + auto-update ----------
+
   function beginInlineEdit({ mountEl, initialValue, onSave, onCancel }){
     const input = document.createElement("input");
     input.className = "editInput";
@@ -1000,7 +1197,7 @@
           state.data.portfolios.push(np);
           state.selectedPortfolioId = np.id;
           state.categoryFilter = "all";
-          save();
+          trySave();
         }
         buildPortfolioSelect();
         buildCategoryFilter();
@@ -1019,7 +1216,7 @@
             const name = prompt("Rename portfolio:", port.name);
             if(name){
               port.name = name.trim();
-              save();
+              trySave();
             }
           }
         }
@@ -1048,7 +1245,7 @@
 
             state.selectedPortfolioId = DEFAULT_PORT_ID;
             state.categoryFilter = "all";
-            save();
+            trySave();
           }
         }
         buildPortfolioSelect();
@@ -1191,7 +1388,7 @@
         const next = prompt("Project category (e.g. Dragon):", cur);
         if(next === null) return;
         p.category = next.trim();
-        save();
+        trySave();
         buildCategoryFilter();
         ensureSelectionsAfterFilter();
         renderAll();
@@ -1210,7 +1407,7 @@
           initialValue: p.name,
           onSave: (val) => {
             p.name = val;
-            save();
+            trySave();
             renderAll();
           },
           onCancel: () => renderProjects()
@@ -1424,7 +1621,6 @@
 
   function canvasToDataURL(canvas, mime, quality){
     return new Promise((resolve) => {
-      // Some browsers ignore quality for PNG; we're using JPEG.
       const url = canvas.toDataURL(mime, quality);
       resolve(url);
     });
@@ -1445,11 +1641,9 @@
     canvas.height = outH;
 
     const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
-    // High quality downscale in modern browsers:
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    // White background to avoid black/transparent weirdness when converting to JPEG
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0,0,outW,outH);
     ctx.drawImage(img, 0, 0, outW, outH);
@@ -1461,15 +1655,12 @@
     const imgs = Array.from(files || []).filter(f => f && f.type && f.type.startsWith("image/"));
     if(imgs.length === 0) return;
 
-    // compress each to JPEG
     const dataUrls = [];
     for(const f of imgs){
       try{
         const out = await compressImageFileToJpegDataUrl(f, IMG);
         dataUrls.push(out);
       }catch(e){
-        // fallback: if compression fails, skip or store raw
-        // We'll store raw via FileReader as fallback.
         dataUrls.push(await fileToDataURLFallback(f));
       }
     }
@@ -1478,7 +1669,7 @@
     task.images = dataUrls.concat(task.images);
     task.heroIndex = 0;
     task.updatedAt = Date.now();
-    save();
+    trySave();
     renderAll();
   }
 
@@ -1529,7 +1720,7 @@
     }
 
     t.updatedAt = Date.now();
-    save();
+    trySave();
     renderAll();
   }
 
@@ -1630,7 +1821,7 @@
         onSave: (val) => {
           t.title = val;
           t.updatedAt = Date.now();
-          save();
+          trySave();
           renderAll();
         },
         onCancel: () => renderDetail()
@@ -1650,7 +1841,7 @@
       d.onclick = () => {
         t.heroIndex = i;
         t.updatedAt = Date.now();
-        save();
+        trySave();
         renderDetail();
         renderCards();
         renderTasksQuick();
@@ -1673,7 +1864,7 @@
       t.images.splice(idx, 1);
       t.heroIndex = 0;
       t.updatedAt = Date.now();
-      save();
+      trySave();
       renderAll();
     };
 
@@ -1682,7 +1873,7 @@
     el("btnSaveDesc").onclick = () => {
       t.description = el("desc").value;
       t.updatedAt = Date.now();
-      save();
+      trySave();
       renderCards();
       renderTasksQuick();
     };
@@ -1709,7 +1900,7 @@
         t.prevProgress = clamp(v, 0, 99);
       }
       t.updatedAt = Date.now();
-      save();
+      trySave();
       renderAll();
     };
 
@@ -1720,7 +1911,7 @@
       t.files = t.files || [];
       t.files.unshift({ name, url });
       t.updatedAt = Date.now();
-      save();
+      trySave();
       el("fileName").value = "";
       el("fileUrl").value = "";
       renderFilesList(t);
@@ -1777,7 +1968,7 @@
       del.onclick = () => {
         t.files.splice(i,1);
         t.updatedAt = Date.now();
-        save();
+        trySave();
         renderFilesList(t);
         renderCards();
         renderTasksQuick();
@@ -1802,7 +1993,7 @@
     state.data.projects.unshift(p);
     state.selectedProjectId = p.id;
     state.selectedTaskId = null;
-    save();
+    trySave();
     buildCategoryFilter();
     renderAll();
     showPanel("left");
@@ -1825,7 +2016,7 @@
       || firstVisibleTask()?.id
       || null;
 
-    save();
+    trySave();
     buildCategoryFilter();
     renderAll();
     showPanel("mid");
@@ -1857,7 +2048,7 @@
     };
     state.data.tasks.unshift(t);
     state.selectedTaskId = t.id;
-    save();
+    trySave();
     renderAll();
     showPanel("right");
   };
@@ -1871,7 +2062,7 @@
     copy.updatedAt = Date.now();
     state.data.tasks.unshift(copy);
     state.selectedTaskId = copy.id;
-    save();
+    trySave();
     renderAll();
   };
 
@@ -1884,7 +2075,7 @@
     const firstTask = state.data.tasks.find(x => x.projectId === state.selectedProjectId);
     state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
 
-    save();
+    trySave();
     renderAll();
   };
 
@@ -1909,23 +2100,26 @@
       if(!file) return;
       try{
         const text = await file.text();
-        const json = migrateData(JSON.parse(text));
-        if(!json.projects || !json.tasks || !json.portfolios) throw new Error("Invalid format");
-        state.data = json;
-        save();
-
-        state.selectedPortfolioId = DEFAULT_PORT_ID;
-        state.categoryFilter = "all";
-        buildPortfolioSelect();
-        buildCategoryFilter();
-        ensureSelectionsAfterFilter();
-        renderAll();
-        alert("Imported!");
+        const json = JSON.parse(text);
+        if(!json || !json.projects || !json.tasks) throw new Error("Invalid format");
+        applyImportedData(json, {showAlert:true});
       }catch(e){
         alert("Import failed: " + (e.message || e));
       }
     };
     input.click();
+  };
+
+  el("btnLinkJson").onclick = async () => {
+    await linkJsonFile();
+  };
+
+  el("chkAutoUpdate").onchange = async (e) => {
+    fileSync.enabled = !!e.target.checked;
+    saveFileSyncSettings();
+    if(fileSync.enabled){
+      await readLinkedFileAndApply({silent:true});
+    }
   };
 
   el("btnReset").onclick = () => {
@@ -1971,27 +2165,34 @@
   el("btnShowMid").onclick = () => showPanel("mid");
   el("btnShowRight").onclick = () => showPanel("right");
 
-  function buildStatusFilters(){
-    const wrap = el("statusFilters");
-    wrap.innerHTML = "";
-    const items = ["All", ...STATUS];
-    items.forEach(s => {
-      const b = document.createElement("div");
-      b.className = "filterChip" + (state.statusFilter===s ? " active" : "");
-      b.textContent = s;
-      b.onclick = () => {
-        state.statusFilter = s;
-        buildStatusFilters();
-        renderCards();
-      };
-      wrap.appendChild(b);
-    });
+  async function init(){
+    loadFileSyncSettings();
+
+    el("chkAutoUpdate").checked = fileSync.enabled;
+
+    // If enabled, prefer linked file on startup (multi-user read-on-reload)
+    if(fileSync.enabled){
+      await readLinkedFileAndApply({silent:true});
+    }
+
+    // If linked file didn't load anything, fallback to localStorage
+    if(!state.data){
+      load();
+    }else{
+      buildPortfolioSelect();
+      buildScopeSelect();
+      buildStatusFilters();
+      buildCategoryFilter();
+      ensureSelectionsAfterFilter();
+      renderAll();
+    }
   }
 
   // init
-  load();
+  await init();
   showPanel("mid");
 })();
 </script>
 </body>
 </html>
+```
