@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -16,9 +15,6 @@
       --muted2: rgba(255,255,255,.42);
       --accent:#f28c28;
       --accent2:#ffb25a;
-      --good:#3bd38a;
-      --warn:#ffcc66;
-      --bad:#ff6a6a;
 
       --r:14px;
       --r2:12px;
@@ -52,10 +48,7 @@
       border-bottom: 1px solid var(--line);
     }
     .wrap{ max-width: 1600px; margin:0 auto; padding: 14px 14px; }
-    .topbar{
-      display:flex; align-items:center; gap:10px;
-      justify-content: space-between;
-    }
+    .topbar{ display:flex; align-items:center; gap:10px; justify-content: space-between; }
 
     .brand{ display:flex; align-items:center; gap:10px; min-width: 220px; }
     .logo{
@@ -94,10 +87,7 @@
       outline: none;
       appearance: none;
     }
-    option{
-      color: #f1f1f1;
-      background: #2b2b2b;
-    }
+    option{ color: #f1f1f1; background: #2b2b2b; }
 
     .btn{
       cursor:pointer;
@@ -109,13 +99,11 @@
       background: linear-gradient(135deg, rgba(242,140,40,.28), rgba(255,255,255,.06));
       transition: transform .08s ease, filter .15s ease, opacity .15s ease;
       user-select:none;
+      white-space:nowrap;
     }
     .btn:hover{ filter: brightness(1.08); }
     .btn:active{ transform: translateY(1px); }
-    .btn.ghost{
-      background: rgba(255,255,255,.04);
-      font-weight: 650;
-    }
+    .btn.ghost{ background: rgba(255,255,255,.04); font-weight: 650; }
     .btn.danger{ background: rgba(255,106,106,.16); }
     .btn:disabled{ opacity:.45; cursor:not-allowed; filter:none; transform:none; }
 
@@ -174,6 +162,7 @@
       border-bottom: 1px solid var(--line);
       background: rgba(255,255,255,.02);
       gap: 10px;
+      flex-wrap:wrap;
     }
     .blockScroll{ padding: 8px; overflow:auto; min-height:0; }
 
@@ -226,6 +215,15 @@
       padding-top: 2px;
     }
 
+    .taskTools{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      width:100%;
+    }
+
     .taskRow{
       display:flex; gap:10px; align-items:center;
       padding: 9px;
@@ -234,12 +232,39 @@
       background: rgba(255,255,255,.03);
       cursor:pointer;
       margin-bottom:8px;
+      user-select:none;
     }
     .taskRow.selected{
       border-color: rgba(242,140,40,.75);
       background: rgba(242,140,40,.07);
       box-shadow: 0 0 0 2px rgba(242,140,40,.18) inset;
     }
+    .taskRow.multiSelected{
+      border-color: rgba(242,140,40,.45);
+      background: rgba(242,140,40,.045);
+      box-shadow: 0 0 0 2px rgba(242,140,40,.12) inset;
+    }
+    .taskRow.dragging{ opacity: .55; }
+
+    .dragHandle{
+      width: 18px;
+      color: rgba(255,255,255,.45);
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1;
+      cursor: grab;
+      flex: 0 0 auto;
+      text-align:center;
+    }
+    .dragHandle:active{ cursor: grabbing; }
+
+    .taskChk{
+      width: 16px; height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
     .thumbMini{
       width: 38px; height: 30px;
       border-radius: 10px;
@@ -553,6 +578,7 @@
     }
     .iconBtn:hover{ filter: brightness(1.10); }
     .iconBtn:active{ transform: translateY(1px); }
+    .iconBtn:disabled{ opacity:.45; cursor:not-allowed; filter:none; transform:none; }
 
     .nameRow{
       display:flex;
@@ -662,7 +688,6 @@
         <div class="title">Workspace</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
           <button class="btn ghost" id="btnNewProject">+ Project</button>
-          <button class="btn ghost" id="btnPasteTasks" title="Paste copied task(s) into the selected project">Paste tasks</button>
           <button class="btn danger" id="btnDeleteProject" title="Deletes selected project and all its tasks">Delete project</button>
         </div>
       </div>
@@ -685,6 +710,16 @@
             <div class="blockHead">
               <span>Tasks (quick)</span>
               <span style="font-family:var(--mono); color:var(--muted2);" id="taskCount">0</span>
+
+              <div class="taskTools">
+                <button class="btn ghost" id="btnSelectAllTasks" type="button" title="Select all tasks in this project">Select all</button>
+                <button class="btn ghost" id="btnClearTaskSel" type="button" title="Clear selection">Clear</button>
+                <button class="btn" id="btnCopyTasks" type="button" title="Copy selected tasks">Copy</button>
+                <button class="btn" id="btnPasteTasks" type="button" title="Paste copied tasks into this project">Paste</button>
+                <button class="btn ghost" id="btnMoveUp" type="button" title="Move selected tasks up (Alt+↑)">↑ Up</button>
+                <button class="btn ghost" id="btnMoveDown" type="button" title="Move selected tasks down (Alt+↓)">↓ Down</button>
+                <span class="pillSmall" id="selCount" style="font-family:var(--mono);">0 selected</span>
+              </div>
             </div>
             <div class="blockScroll" id="tasksQuick"></div>
           </div>
@@ -699,6 +734,7 @@
         <div class="pill" style="min-height:38px; padding:8px 10px;">
           <span style="color:var(--muted2);font-weight:900;">Sort</span>
           <select id="sortBy">
+            <option value="order">Project order</option>
             <option value="updated">Recently updated</option>
             <option value="stage">Stage</option>
             <option value="status">Status</option>
@@ -716,7 +752,6 @@
       <div class="panelHead">
         <div class="title">Task details</div>
         <div style="display:flex; gap:8px;">
-          <button class="btn ghost" id="btnCopyTask" title="Copy this task (then select another project and Paste tasks)">Copy</button>
           <button class="btn ghost" id="btnDuplicate">Duplicate</button>
           <button class="btn danger" id="btnDeleteTask">Delete</button>
         </div>
@@ -729,23 +764,7 @@
 
 <script>
 (() => {
-  /*********************************************************************
-   * FIX FOR “MERGE THEN REFRESH LOSES TASKS” (even with auto-update OFF)
-   *
-   * Root cause in this app: tasks/images are stored as base64 strings.
-   * That quickly exceeds localStorage quota (usually ~5MB). When that
-   * happens, localStorage.setItem throws QuotaExceededError and the new
-   * merged state is NOT persisted. After refresh you load the older saved
-   * copy, so “moved” tasks appear to vanish.
-   *
-   * Fix: persist the whole dataset in IndexedDB (much larger capacity),
-   * and use localStorage only as a fallback.
-   *********************************************************************/
-
-  // Old localStorage key (kept for backwards compatibility / migration)
   const STORAGE_KEY = "pt_v4_jpeg_compress_select_fix";
-
-  // New IndexedDB storage (primary)
   const DB_NAME = "pt_store_v1";
   const DB_VER = 1;
   const STORE = "kv";
@@ -765,12 +784,17 @@
     data: null,
     selectedPortfolioId: DEFAULT_PORT_ID,
     selectedProjectId: null,
+
     selectedTaskId: null,
+    selectedTaskIds: [],
+    lastTaskClickIndex: null,
+
     statusFilter: "All",
-    sortBy: "updated",
+    sortBy: "order",
     query: "",
     scope: "project",
     categoryFilter: "all",
+
     clipboardTasks: [],
   };
 
@@ -814,7 +838,7 @@
     const p3 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Sci-Fi Prop Set", category:"Props", progress: 0 };
 
     const now = Date.now();
-    const mkTask = (projectId, stage, title, shortDesc, status, progress, updatedAtOffset=0) => ({
+    const mkTask = (projectId, stage, title, shortDesc, status, progress, updatedAtOffset=0, order=0) => ({
       id: uid("t"),
       projectId,
       stage,
@@ -827,18 +851,19 @@
       description: shortDesc + "\n\nNotes:\n- ",
       images: [ placeholderSvg(stage) ],
       files: [{ name: "Reference board", url: "https://example.com" }],
-      heroIndex: 0
+      heroIndex: 0,
+      order
     });
 
     const tasks = [
-      mkTask(p1.id,"Concept","Silhouette exploration","10 fast silhouettes, pick top 3.", "In Progress", 45, 1000*60*10),
-      mkTask(p1.id,"AI Model","Midjourney / SD pass","Generate 6 variants matching silhouette.", "Not Started", 0, 1000*60*60*2),
-      mkTask(p1.id,"3D Model","Base sculpt","Primary forms + proportions locked.", "In Progress", 30, 1000*60*30),
+      mkTask(p1.id,"Concept","Silhouette exploration","10 fast silhouettes, pick top 3.", "In Progress", 45, 1000*60*10, 0),
+      mkTask(p1.id,"AI Model","Midjourney / SD pass","Generate 6 variants matching silhouette.", "Not Started", 0, 1000*60*60*2, 1),
+      mkTask(p1.id,"3D Model","Base sculpt","Primary forms + proportions locked.", "In Progress", 30, 1000*60*30, 2),
 
-      mkTask(p2.id,"Concept","Logo + shape language","Blocky, cute, readable from far.", "Done", 100, 1000*60*60*72),
-      mkTask(p2.id,"3D Model","Clean topology pass","Animation friendly edgeflow.", "In Progress", 70, 1000*60*60*20),
+      mkTask(p2.id,"Concept","Logo + shape language","Blocky, cute, readable from far.", "Done", 100, 1000*60*60*72, 0),
+      mkTask(p2.id,"3D Model","Clean topology pass","Animation friendly edgeflow.", "In Progress", 70, 1000*60*60*20, 1),
 
-      mkTask(p3.id,"Concept","Prop list + refs","Collect 20 refs per prop.", "In Progress", 25, 1000*60*60*4),
+      mkTask(p3.id,"Concept","Prop list + refs","Collect 20 refs per prop.", "In Progress", 25, 1000*60*60*4, 0),
     ];
 
     return { portfolios, projects: [p1,p2,p3], tasks };
@@ -847,12 +872,8 @@
   function migrateData(d){
     if(!d || typeof d !== "object") d = defaultData();
 
-    if(!d.portfolios){
-      d.portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
-    }
-    if(!d.portfolios.find(p => p.id === DEFAULT_PORT_ID)){
-      d.portfolios.unshift({ id: DEFAULT_PORT_ID, name: "Default" });
-    }
+    if(!d.portfolios) d.portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
+    if(!d.portfolios.find(p => p.id === DEFAULT_PORT_ID)) d.portfolios.unshift({ id: DEFAULT_PORT_ID, name: "Default" });
 
     d.projects = Array.isArray(d.projects) ? d.projects : [];
     d.tasks = Array.isArray(d.tasks) ? d.tasks : [];
@@ -874,9 +895,31 @@
       if(typeof t.status !== "string" || !STATUS.includes(t.status)) t.status = "Not Started";
       if(typeof t.progress !== "number") t.progress = Number(t.progress) || 0;
       if(typeof t.updatedAt !== "number") t.updatedAt = Date.now();
+      if(typeof t.order !== "number") t.order = -1;
     });
 
+    normalizeTaskOrder(d);
     return d;
+  }
+
+  function normalizeTaskOrder(d){
+    const byProject = new Map();
+    for(const t of (d.tasks||[])){
+      if(!byProject.has(t.projectId)) byProject.set(t.projectId, []);
+      byProject.get(t.projectId).push(t);
+    }
+    for(const [pid, arr] of byProject.entries()){
+      arr.sort((a,b)=>{
+        const ao = (typeof a.order==="number" ? a.order : -1);
+        const bo = (typeof b.order==="number" ? b.order : -1);
+        const aHas = ao >= 0, bHas = bo >= 0;
+        if(aHas && bHas) return ao - bo;
+        if(aHas && !bHas) return -1;
+        if(!aHas && bHas) return 1;
+        return (b.updatedAt||0) - (a.updatedAt||0);
+      });
+      arr.forEach((t,i)=>{ t.order = i; });
+    }
   }
 
   // ---------------- IndexedDB helpers ----------------
@@ -885,9 +928,7 @@
       const req = indexedDB.open(DB_NAME, DB_VER);
       req.onupgradeneeded = () => {
         const db = req.result;
-        if(!db.objectStoreNames.contains(STORE)){
-          db.createObjectStore(STORE);
-        }
+        if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
@@ -921,142 +962,267 @@
       tx.onerror = () => reject(tx.error);
     });
   }
-  // ---------------------------------------------------
 
-  // Debounced save to avoid hammering IDB during slider drags etc.
-  let saveTimer = null;
   let saveInFlight = Promise.resolve();
-
-  function scheduleSave(){
-    if(saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { saveNow(); }, 120);
-  }
-
-  function saveNow(){
+  async function saveNow(){
     const snapshot = state.data;
-    if(!snapshot) return Promise.resolve();
+    if(!snapshot) return;
 
-    // chain so we keep write order
     saveInFlight = saveInFlight.then(async () => {
-      // Primary: IndexedDB (large capacity)
-      try{
-        await idbSet(KEY_DATA, snapshot);
-      }catch(e){
-        console.warn("IndexedDB save failed:", e);
-        alert("Save failed (IndexedDB). Your changes may not persist after refresh.\n\n" + (e.message || e));
-      }
-
-      // Secondary: localStorage best-effort fallback (may fail due quota)
-      try{
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-      }catch(e){
-        // expected sometimes when images are big; IDB is still the real storage now
-        console.warn("localStorage save failed (expected if images are large):", e);
-      }
+      // No visible debug; just best-effort persistence.
+      await idbSet(KEY_DATA, snapshot).catch(()=>{});
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot)); }catch(_){}
     });
 
     return saveInFlight;
   }
 
   async function loadDataFromStorage(){
-    // 1) Try IndexedDB
     try{
       const d = await idbGet(KEY_DATA);
       if(d) return migrateData(d);
-    }catch(e){
-      console.warn("IndexedDB read failed:", e);
-    }
+    }catch(_){}
 
-    // 2) Fallback localStorage
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       if(raw) return migrateData(JSON.parse(raw));
-    }catch(e){
-      console.warn("localStorage read failed:", e);
-    }
+    }catch(_){}
 
-    // 3) Default
     const d = migrateData(defaultData());
-    // persist default so next load is consistent
     try{ await idbSet(KEY_DATA, d); }catch(_){}
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }catch(_){}
     return d;
   }
 
-  // ---------------- Clipboard tasks ----------------
-  function updateClipboardUI(){
-    const has = Array.isArray(state.clipboardTasks) && state.clipboardTasks.length > 0;
-    const pasteBtn = el("btnPasteTasks");
-    if(pasteBtn){
-      pasteBtn.disabled = !has || !state.selectedProjectId;
-      pasteBtn.textContent = has ? `Paste tasks (${state.clipboardTasks.length})` : "Paste tasks";
+  window.addEventListener("visibilitychange", () => {
+    if(document.visibilityState === "hidden"){
+      saveNow();
+    }
+  });
+
+  // ---------------- Multi-select helpers ----------------
+  function setPrimaryTask(taskId){
+    state.selectedTaskId = taskId;
+    if(taskId && !state.selectedTaskIds.includes(taskId)){
+      state.selectedTaskIds = [taskId];
     }
   }
-  function getSelectedTask(){
-    return state.data.tasks.find(t => t.id === state.selectedTaskId) || null;
-  }
-  function copySelectedTaskToClipboard(){
-    const t = getSelectedTask();
-    if(!t) return;
-    state.clipboardTasks = [JSON.parse(JSON.stringify(t))];
-    updateClipboardUI();
-    alert("Task copied. Select a project then click Paste tasks.");
-  }
-  function pasteClipboardTasksIntoProject(targetProjectId){
-    if(!targetProjectId) return alert("Select a target project first.");
-    if(!state.clipboardTasks || state.clipboardTasks.length === 0) return alert("Clipboard is empty. Copy a task first.");
 
+  function clearTaskSelection(){
+    state.selectedTaskIds = [];
+    state.selectedTaskId = null;
+    state.lastTaskClickIndex = null;
+  }
+
+  function getCurrentProjectTasksOrdered(){
+    if(!state.selectedProjectId) return [];
+    const pid = state.selectedProjectId;
+    return state.data.tasks
+      .filter(t => t.projectId === pid)
+      .slice()
+      .sort((a,b)=> (a.order||0) - (b.order||0) || (b.updatedAt||0) - (a.updatedAt||0));
+  }
+
+  function toggleTaskSelection(taskId, idxInList, evt){
+    const tasks = getCurrentProjectTasksOrdered();
+    const ids = tasks.map(t => t.id);
+
+    const isMeta = !!(evt && (evt.ctrlKey || evt.metaKey));
+    const isShift = !!(evt && evt.shiftKey);
+
+    if(isShift && state.lastTaskClickIndex != null && idxInList != null){
+      const a = Math.min(state.lastTaskClickIndex, idxInList);
+      const b = Math.max(state.lastTaskClickIndex, idxInList);
+      const rangeIds = ids.slice(a, b+1);
+
+      if(isMeta){
+        const set = new Set(state.selectedTaskIds);
+        rangeIds.forEach(id => set.add(id));
+        state.selectedTaskIds = Array.from(set);
+      }else{
+        state.selectedTaskIds = rangeIds;
+      }
+      state.selectedTaskId = taskId;
+      state.lastTaskClickIndex = idxInList;
+      return;
+    }
+
+    if(isMeta){
+      const set = new Set(state.selectedTaskIds);
+      if(set.has(taskId)) set.delete(taskId);
+      else set.add(taskId);
+      state.selectedTaskIds = Array.from(set);
+      state.selectedTaskId = taskId;
+      state.lastTaskClickIndex = idxInList;
+      return;
+    }
+
+    state.selectedTaskIds = [taskId];
+    state.selectedTaskId = taskId;
+    state.lastTaskClickIndex = idxInList;
+  }
+
+  function updateTaskPanelButtons(){
+    const selCount = state.selectedTaskIds.length;
+    const hasClipboard = state.clipboardTasks.length > 0;
+    const hasProject = !!state.selectedProjectId;
+
+    el("selCount").textContent = `${selCount} selected`;
+
+    el("btnCopyTasks").disabled = selCount === 0;
+    el("btnPasteTasks").disabled = !hasClipboard || !hasProject;
+    el("btnMoveUp").disabled = selCount === 0;
+    el("btnMoveDown").disabled = selCount === 0;
+    el("btnClearTaskSel").disabled = selCount === 0;
+    el("btnSelectAllTasks").disabled = !hasProject;
+
+    el("btnPasteTasks").title = hasClipboard
+      ? `Paste ${state.clipboardTasks.length} copied task(s) into this project`
+      : "Paste copied tasks into this project";
+  }
+
+  function copySelectedTasks(){
+    const ids = new Set(state.selectedTaskIds);
+    const tasks = state.data.tasks.filter(t => ids.has(t.id));
+    if(tasks.length === 0) return;
+
+    const orderMap = new Map(getCurrentProjectTasksOrdered().map((t,i)=>[t.id,i]));
+    tasks.sort((a,b)=> (orderMap.get(a.id) ?? 1e9) - (orderMap.get(b.id) ?? 1e9));
+    state.clipboardTasks = tasks.map(t => JSON.parse(JSON.stringify(t)));
+    updateTaskPanelButtons();
+  }
+
+  async function pasteTasksIntoSelectedProject(){
+    const targetPid = state.selectedProjectId;
+    if(!targetPid) return;
+    if(state.clipboardTasks.length === 0) return;
+
+    const existing = getCurrentProjectTasksOrdered();
+    const startOrder = existing.length;
     const now = Date.now();
-    const pasted = state.clipboardTasks.map(src => {
+
+    const pasted = state.clipboardTasks.map((src, i) => {
       const c = JSON.parse(JSON.stringify(src));
       c.id = uid("t");
-      c.projectId = targetProjectId;
+      c.projectId = targetPid;
       c.updatedAt = now;
+      c.order = startOrder + i;
       return c;
     });
 
-    state.data.tasks.unshift(...pasted);
-    state.selectedProjectId = targetProjectId;
-    state.selectedTaskId = pasted[0]?.id ?? state.selectedTaskId;
+    state.data.tasks.push(...pasted);
+    normalizeTaskOrder(state.data);
 
-    scheduleSave();
+    state.selectedTaskIds = pasted.map(t=>t.id);
+    state.selectedTaskId = pasted[0]?.id ?? state.selectedTaskId;
+    state.lastTaskClickIndex = null;
+
+    await saveNow();
     renderAll();
     showPanel("right");
   }
-  // ------------------------------------------------
 
-  function beginInlineEdit({ mountEl, initialValue, onSave, onCancel }){
-    const input = document.createElement("input");
-    input.className = "editInput";
-    input.value = initialValue ?? "";
-    input.setAttribute("aria-label", "Rename");
-
-    let finished = false;
-
-    const finishSave = () => {
-      if(finished) return;
-      finished = true;
-      const v = input.value.trim();
-      if(v) onSave(v);
-      else onCancel?.();
-    };
-    const finishCancel = () => {
-      if(finished) return;
-      finished = true;
-      onCancel?.();
-    };
-
-    input.addEventListener("keydown", (e) => {
-      if(e.key === "Enter") finishSave();
-      if(e.key === "Escape") finishCancel();
-    });
-    input.addEventListener("blur", () => finishSave());
-
-    mountEl.replaceChildren(input);
-    input.focus();
-    input.select();
+  function selectAllTasksInProject(){
+    const tasks = getCurrentProjectTasksOrdered();
+    state.selectedTaskIds = tasks.map(t=>t.id);
+    state.selectedTaskId = tasks[0]?.id ?? state.selectedTaskId;
+    state.lastTaskClickIndex = tasks.length ? 0 : null;
+    renderTasksQuick();
+    renderCards();
+    renderDetail();
+    updateTaskPanelButtons();
   }
 
+  // ---------------- Reordering ----------------
+  function applyReorderForProject(pid, orderedIds){
+    const set = new Set(orderedIds);
+    let idx = 0;
+    for(const id of orderedIds){
+      const t = state.data.tasks.find(x => x.id === id);
+      if(t && t.projectId === pid){
+        t.order = idx++;
+        t.updatedAt = Date.now();
+      }
+    }
+    const remainder = state.data.tasks
+      .filter(t => t.projectId === pid && !set.has(t.id))
+      .sort((a,b)=> (a.order||0) - (b.order||0) || (b.updatedAt||0)-(a.updatedAt||0));
+    for(const t of remainder) t.order = idx++;
+  }
+
+  async function moveSelectedTasks(delta){
+    const pid = state.selectedProjectId;
+    if(!pid) return;
+    const tasks = getCurrentProjectTasksOrdered();
+    if(tasks.length === 0) return;
+
+    const selected = new Set(state.selectedTaskIds);
+    if(selected.size === 0) return;
+
+    const order = tasks.map(t=>t.id);
+
+    if(delta < 0){
+      for(let i=1;i<order.length;i++){
+        if(selected.has(order[i]) && !selected.has(order[i-1])){
+          [order[i-1], order[i]] = [order[i], order[i-1]];
+        }
+      }
+    } else {
+      for(let i=order.length-2;i>=0;i--){
+        if(selected.has(order[i]) && !selected.has(order[i+1])){
+          [order[i+1], order[i]] = [order[i], order[i+1]];
+        }
+      }
+    }
+
+    applyReorderForProject(pid, order);
+    await saveNow();
+    renderTasksQuick();
+    renderCards();
+  }
+
+  let dragTaskId = null;
+
+  function handleTaskDragStart(e, taskId){
+    dragTaskId = taskId;
+    e.dataTransfer.effectAllowed = "move";
+    try{ e.dataTransfer.setData("text/plain", taskId); }catch(_){}
+    e.currentTarget.classList.add("dragging");
+  }
+  function handleTaskDragEnd(e){
+    e.currentTarget.classList.remove("dragging");
+    dragTaskId = null;
+  }
+  function handleTaskDragOver(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+  async function handleTaskDrop(e, dropTaskId){
+    e.preventDefault();
+    const pid = state.selectedProjectId;
+    if(!pid) return;
+
+    const fromId = dragTaskId || (()=>{ try{ return e.dataTransfer.getData("text/plain"); }catch(_){ return null; } })();
+    const toId = dropTaskId;
+    if(!fromId || !toId || fromId === toId) return;
+
+    const tasks = getCurrentProjectTasksOrdered();
+    const ids = tasks.map(t=>t.id);
+    const fromIdx = ids.indexOf(fromId);
+    const toIdx = ids.indexOf(toId);
+    if(fromIdx === -1 || toIdx === -1) return;
+
+    ids.splice(fromIdx, 1);
+    const insertAt = toIdx;
+    ids.splice(insertAt, 0, fromId);
+
+    applyReorderForProject(pid, ids);
+    await saveNow();
+    renderTasksQuick();
+    renderCards();
+  }
+
+  // ---------------- UI & filtering ----------------
   function statusToChipClass(s){
     if(s==="Done") return "done";
     if(s==="In Progress") return "progress";
@@ -1089,26 +1255,41 @@
   }
 
   function firstVisibleProject(){ return visibleProjects()[0] || null; }
-  function visibleProjectIdsSet(){ return new Set(visibleProjects().map(p => p.id)); }
-  function firstVisibleTask(){
-    const projIds = visibleProjectIdsSet();
-    return state.data.tasks.find(t => projIds.has(t.projectId)) || null;
-  }
 
   function ensureSelectionsAfterFilter(){
     const vis = visibleProjects();
     if(vis.length === 0){
       state.selectedProjectId = null;
       state.selectedTaskId = null;
-      updateClipboardUI();
+      state.selectedTaskIds = [];
+      state.lastTaskClickIndex = null;
+      updateTaskPanelButtons();
       return;
     }
     if(!vis.find(p => p.id === state.selectedProjectId)){
       state.selectedProjectId = vis[0].id;
     }
-    const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
-    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
-    updateClipboardUI();
+
+    const tasks = getCurrentProjectTasksOrdered();
+    if(tasks.length === 0){
+      state.selectedTaskId = null;
+      state.selectedTaskIds = [];
+      state.lastTaskClickIndex = null;
+    } else {
+      const valid = new Set(tasks.map(t=>t.id));
+      state.selectedTaskIds = state.selectedTaskIds.filter(id => valid.has(id));
+      if(state.selectedTaskId && !valid.has(state.selectedTaskId)){
+        state.selectedTaskId = tasks[0].id;
+      }
+      if(!state.selectedTaskId){
+        state.selectedTaskId = tasks[0].id;
+      }
+      if(state.selectedTaskIds.length === 0 && state.selectedTaskId){
+        state.selectedTaskIds = [state.selectedTaskId];
+      }
+    }
+
+    updateTaskPanelButtons();
   }
 
   function buildPortfolioSelect(){
@@ -1134,7 +1315,7 @@
 
     sel.value = state.selectedPortfolioId;
 
-    sel.onchange = () => {
+    sel.onchange = async () => {
       const v = sel.value;
 
       if(v === "__new__"){
@@ -1144,7 +1325,7 @@
           state.data.portfolios.push(np);
           state.selectedPortfolioId = np.id;
           state.categoryFilter = "all";
-          scheduleSave();
+          await saveNow();
         }
         buildPortfolioSelect();
         buildCategoryFilter();
@@ -1163,7 +1344,7 @@
             const name = prompt("Rename portfolio:", port.name);
             if(name){
               port.name = name.trim();
-              scheduleSave();
+              await saveNow();
             }
           }
         }
@@ -1192,7 +1373,8 @@
 
             state.selectedPortfolioId = DEFAULT_PORT_ID;
             state.categoryFilter = "all";
-            scheduleSave();
+            normalizeTaskOrder(state.data);
+            await saveNow();
           }
         }
         buildPortfolioSelect();
@@ -1272,68 +1454,116 @@
     renderTasksQuick();
     renderCards();
     renderDetail();
-    updateClipboardUI();
+    updateTaskPanelButtons();
   }
 
-  // ✅ Merge fix (logic) + ✅ persistence fix (IndexedDB)
-  function renameProjectOrMerge(projectId, newName){
+  // ✅ Merge helpers (works on rename OR category change)
+  function findDuplicateProject(projectId){
+    const proj = state.data.projects.find(p => p.id === projectId);
+    if(!proj) return null;
+
+    const nameN = norm(proj.name);
+    const catN = norm(proj.category);
+
+    if(!nameN || !catN) return null;
+
+    return state.data.projects.find(p =>
+      p.id !== projectId &&
+      norm(p.name) === nameN &&
+      norm(p.category) === catN
+    ) || null;
+  }
+
+  async function mergeProjects(fromId, toId){
+    if(fromId === toId) return;
+
+    let movedCount = 0;
+    for(const t of state.data.tasks){
+      if(t.projectId === fromId){
+        t.projectId = toId;
+        t.updatedAt = Date.now();
+        movedCount++;
+      }
+    }
+
+    state.data.projects = state.data.projects.filter(p => p.id !== fromId);
+    normalizeTaskOrder(state.data);
+
+    state.selectedProjectId = toId;
+
+    const toTasks = state.data.tasks
+      .filter(t => t.projectId === toId)
+      .slice()
+      .sort((a,b)=> (a.order||0)-(b.order||0));
+    state.selectedTaskId = toTasks[0]?.id ?? null;
+    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+    state.lastTaskClickIndex = null;
+
+    await saveNow();
+
+    buildPortfolioSelect();
+    buildCategoryFilter();
+    ensureSelectionsAfterFilter();
+    renderAll();
+
+    return movedCount;
+  }
+
+  async function mergeIfDuplicate(projectId){
+    const dup = findDuplicateProject(projectId);
+    if(!dup) return false;
+
+    // Merge current -> existing dup (keep the existing project id)
+    await mergeProjects(projectId, dup.id);
+    return true;
+  }
+
+  async function renameProjectOrMerge(projectId, newName){
     const proj = state.data.projects.find(p => p.id === projectId);
     if(!proj) return;
 
     const newNameNorm = norm(newName);
     if(!newNameNorm) return;
 
-    const samePortfolioId = proj.portfolioId;
-    const projCatNorm = norm(proj.category);
-
-    const existing = state.data.projects.find(p =>
-      p.id !== proj.id &&
-      p.portfolioId === samePortfolioId &&
-      norm(p.category) === projCatNorm &&
-      norm(p.name) === newNameNorm
-    );
-
-    if(existing){
-      const fromId = proj.id;
-      const toId = existing.id;
-
-      let movedCount = 0;
-      for(const t of state.data.tasks){
-        if(t.projectId === fromId){
-          t.projectId = toId;
-          t.updatedAt = Date.now();
-          movedCount++;
-        }
-      }
-
-      // remove old project
-      state.data.projects = state.data.projects.filter(p => p.id !== fromId);
-
-      // keep UI sane
-      state.categoryFilter = "all";
-      if(state.selectedPortfolioId !== ALL_PORT_ID && state.selectedPortfolioId !== samePortfolioId){
-        state.selectedPortfolioId = samePortfolioId;
-      }
-
-      state.selectedProjectId = toId;
-      const newest = state.data.tasks
-        .filter(t => t.projectId === toId)
-        .sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0))[0];
-      state.selectedTaskId = newest?.id ?? state.selectedTaskId;
-
-      scheduleSave();
-      buildPortfolioSelect();
-      buildCategoryFilter();
-      ensureSelectionsAfterFilter();
-      renderAll();
-
-      alert(`Merged into "${existing.name}" (${movedCount} task(s) moved).`);
-      return;
-    }
-
+    // Temporarily set name then run duplicate check
     proj.name = newName.trim();
-    scheduleSave();
+
+    const didMerge = await mergeIfDuplicate(projectId);
+    if(didMerge) return;
+
+    await saveNow();
     renderAll();
+  }
+
+  function beginInlineEdit({ mountEl, initialValue, onSave, onCancel }){
+    const input = document.createElement("input");
+    input.className = "editInput";
+    input.value = initialValue ?? "";
+    input.setAttribute("aria-label", "Rename");
+
+    let finished = false;
+    const finishSave = () => {
+      if(finished) return;
+      finished = true;
+      const v = input.value.trim();
+      if(v) onSave(v);
+      else onCancel?.();
+    };
+    const finishCancel = () => {
+      if(finished) return;
+      finished = true;
+      onCancel?.();
+    };
+
+    input.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") finishSave();
+      if(e.key === "Escape") finishCancel();
+    });
+    input.addEventListener("blur", () => finishSave());
+
+    mountEl.replaceChildren(input);
+    input.focus();
+    input.select();
   }
 
   function renderProjects(){
@@ -1350,10 +1580,12 @@
       item.className = "projectItem" + (p.id===state.selectedProjectId ? " selected" : "");
       item.onclick = () => {
         state.selectedProjectId = p.id;
-        const firstTask = state.data.tasks
-          .filter(t => t.projectId === p.id)
-          .sort((a,b)=>b.updatedAt-a.updatedAt)[0];
-        state.selectedTaskId = firstTask?.id ?? null;
+
+        const tasks = getCurrentProjectTasksOrdered();
+        state.selectedTaskId = tasks[0]?.id ?? null;
+        state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+        state.lastTaskClickIndex = tasks.length ? 0 : null;
+
         renderAll();
         showPanel("mid");
       };
@@ -1376,14 +1608,20 @@
       tagBtn.className = "iconBtn";
       tagBtn.type = "button";
       tagBtn.textContent = "🏷";
-      tagBtn.title = "Set category";
-      tagBtn.onclick = (e) => {
+      tagBtn.title = "Set category (merges if same name + category exists)";
+      tagBtn.onclick = async (e) => {
         e.preventDefault(); e.stopPropagation();
         const cur = (p.category || "").trim();
         const next = prompt("Project category (e.g. Dragon):", cur);
         if(next === null) return;
+
         p.category = next.trim();
-        scheduleSave();
+
+        // ✅ NEW: category changes can cause duplicates -> merge
+        const didMerge = await mergeIfDuplicate(p.id);
+        if(didMerge) return;
+
+        await saveNow();
         buildCategoryFilter();
         ensureSelectionsAfterFilter();
         renderAll();
@@ -1393,7 +1631,7 @@
       editBtn.className = "iconBtn";
       editBtn.type = "button";
       editBtn.textContent = "✎";
-      editBtn.title = "Rename project (merges if same name + same category exists)";
+      editBtn.title = "Rename project (merges if same name + category exists)";
       editBtn.onclick = (e) => {
         e.preventDefault(); e.stopPropagation();
         state.selectedProjectId = p.id;
@@ -1463,23 +1701,63 @@
     if(!state.selectedProjectId){
       el("taskCount").textContent = "0";
       list.innerHTML = `<div class="empty">No project selected.</div>`;
+      updateTaskPanelButtons();
       return;
     }
 
-    const tasks = state.data.tasks
-      .filter(t => t.projectId === state.selectedProjectId)
-      .sort((a,b)=>b.updatedAt-a.updatedAt);
-
+    const tasks = getCurrentProjectTasksOrdered();
     el("taskCount").textContent = String(tasks.length);
 
-    tasks.forEach(t => {
+    const selectedSet = new Set(state.selectedTaskIds);
+
+    if(tasks.length === 0){
+      list.innerHTML = `<div class="empty">No tasks in this project yet.</div>`;
+      updateTaskPanelButtons();
+      return;
+    }
+
+    tasks.forEach((t, idx) => {
       const row = document.createElement("div");
-      row.className = "taskRow" + (t.id===state.selectedTaskId ? " selected" : "");
-      row.onclick = () => {
-        state.selectedTaskId = t.id;
+      const isPrimary = (t.id === state.selectedTaskId);
+      const isMulti = selectedSet.has(t.id);
+
+      row.className = "taskRow" + (isPrimary ? " selected" : "") + (!isPrimary && isMulti ? " multiSelected" : "");
+      row.draggable = true;
+
+      row.addEventListener("dragstart", (e) => handleTaskDragStart(e, t.id));
+      row.addEventListener("dragend", (e) => handleTaskDragEnd(e));
+      row.addEventListener("dragover", (e) => handleTaskDragOver(e));
+      row.addEventListener("drop", (e) => handleTaskDrop(e, t.id));
+
+      row.onclick = (e) => {
+        if(e.target && (e.target.classList?.contains("taskChk"))) return;
+
+        toggleTaskSelection(t.id, idx, e);
+        renderTasksQuick();
         renderCards();
         renderDetail();
+        updateTaskPanelButtons();
         showPanel("right");
+      };
+
+      const drag = document.createElement("div");
+      drag.className = "dragHandle";
+      drag.textContent = "⋮⋮";
+      drag.title = "Drag to reorder";
+
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.className = "taskChk";
+      chk.checked = selectedSet.has(t.id);
+      chk.title = "Select task";
+      chk.onclick = (e) => {
+        e.stopPropagation();
+        const fakeEvt = { ctrlKey: true, metaKey: true, shiftKey: e.shiftKey };
+        toggleTaskSelection(t.id, idx, fakeEvt);
+        renderTasksQuick();
+        renderCards();
+        renderDetail();
+        updateTaskPanelButtons();
       };
 
       const thumb = document.createElement("div");
@@ -1503,9 +1781,11 @@
       chip.className = "chip " + statusToChipClass(t.status);
       chip.textContent = t.status;
 
-      row.append(thumb, meta, chip);
+      row.append(drag, chk, thumb, meta, chip);
       list.appendChild(row);
     });
+
+    updateTaskPanelButtons();
   }
 
   function sortedTasksForGrid(){
@@ -1515,8 +1795,13 @@
     const cmpStatus = (a,b) => STATUS.indexOf(a.status) - STATUS.indexOf(b.status);
     const cmpTitle = (a,b) => a.title.localeCompare(b.title);
     const cmpUpdated = (a,b) => (b.updatedAt||0) - (a.updatedAt||0);
+    const cmpOrder = (a,b) => {
+      if(a.projectId !== b.projectId) return 0;
+      return (a.order||0) - (b.order||0);
+    };
 
     switch(state.sortBy){
+      case "order": tasks.sort((a,b)=> cmpOrder(a,b) || cmpUpdated(a,b)); break;
       case "stage": tasks.sort((a,b)=> cmpStage(a,b) || cmpUpdated(a,b)); break;
       case "status": tasks.sort((a,b)=> cmpStatus(a,b) || cmpUpdated(a,b)); break;
       case "title": tasks.sort((a,b)=> cmpTitle(a,b)); break;
@@ -1542,11 +1827,14 @@
       const card = document.createElement("div");
       card.className = "card" + (t.id===state.selectedTaskId ? " selected" : "");
       card.onclick = () => {
-        state.selectedTaskId = t.id;
         state.selectedProjectId = t.projectId;
+        setPrimaryTask(t.id);
+        state.lastTaskClickIndex = null;
+
         renderTasksQuick();
         renderCards();
         renderDetail();
+        updateTaskPanelButtons();
         showPanel("right");
       };
 
@@ -1591,6 +1879,10 @@
     });
   }
 
+  function getSelectedTask(){
+    return state.data.tasks.find(t => t.id === state.selectedTaskId) || null;
+  }
+
   // --- JPEG upload helpers ---
   function loadImageFromFile(file){
     return new Promise((resolve, reject) => {
@@ -1600,9 +1892,6 @@
       img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
       img.src = url;
     });
-  }
-  function canvasToDataURL(canvas, mime, quality){
-    return Promise.resolve(canvas.toDataURL(mime, quality));
   }
   async function compressImageFileToJpegDataUrl(file, {maxEdge, quality, mime}){
     const img = await loadImageFromFile(file);
@@ -1624,7 +1913,7 @@
     ctx.fillRect(0,0,outW,outH);
     ctx.drawImage(img, 0, 0, outW, outH);
 
-    return await canvasToDataURL(canvas, mime, quality);
+    return canvas.toDataURL(mime, quality);
   }
   function fileToDataURLFallback(file){
     return new Promise((resolve, reject) => {
@@ -1648,7 +1937,7 @@
     task.images = dataUrls.concat(task.images);
     task.heroIndex = 0;
     task.updatedAt = Date.now();
-    scheduleSave();
+    await saveNow();
     renderAll();
   }
 
@@ -1668,7 +1957,7 @@
     });
   }
 
-  function applyStatus(t, newStatus){
+  async function applyStatus(t, newStatus){
     const curProg = clamp(Number(t.progress)||0, 0, 100);
 
     if(newStatus === "Done"){
@@ -1690,7 +1979,7 @@
     }
 
     t.updatedAt = Date.now();
-    scheduleSave();
+    await saveNow();
     renderAll();
   }
 
@@ -1724,6 +2013,7 @@
           <span class="chip ${statusChipClass}">${escapeHtml(t.status)}</span>
           <span class="pillSmall">${escapeHtml(project?.name || "Unknown project")}</span>
           <span class="pillSmall">${escapeHtml(portfolio?.name || "Unknown portfolio")}</span>
+          <span class="pillSmall" style="font-family:var(--mono);">Task ID: ${escapeHtml(t.id)}</span>
           <span style="font-family:var(--mono); color:var(--muted2);">Updated: ${new Date(t.updatedAt||Date.now()).toLocaleString()}</span>
         </div>
 
@@ -1788,10 +2078,10 @@
       beginInlineEdit({
         mountEl: el("taskTitleMount"),
         initialValue: t.title,
-        onSave: (val) => {
+        onSave: async (val) => {
           t.title = val;
           t.updatedAt = Date.now();
-          scheduleSave();
+          await saveNow();
           renderAll();
         },
         onCancel: () => renderDetail()
@@ -1808,10 +2098,10 @@
       im.alt = "";
       im.src = src;
       d.appendChild(im);
-      d.onclick = () => {
+      d.onclick = async () => {
         t.heroIndex = i;
         t.updatedAt = Date.now();
-        scheduleSave();
+        await saveNow();
         renderDetail();
         renderCards();
         renderTasksQuick();
@@ -1828,22 +2118,22 @@
       e.target.value = "";
     };
 
-    el("btnRemoveImg").onclick = () => {
+    el("btnRemoveImg").onclick = async () => {
       if(!t.images || t.images.length === 0) return;
       const idx = t.heroIndex || 0;
       t.images.splice(idx, 1);
       t.heroIndex = 0;
       t.updatedAt = Date.now();
-      scheduleSave();
+      await saveNow();
       renderAll();
     };
 
     renderFilesList(t);
 
-    el("btnSaveDesc").onclick = () => {
+    el("btnSaveDesc").onclick = async () => {
       t.description = el("desc").value;
       t.updatedAt = Date.now();
-      scheduleSave();
+      await saveNow();
       renderCards();
       renderTasksQuick();
     };
@@ -1856,7 +2146,7 @@
       const v = Number(e.target.value)||0;
       el("progLabel").textContent = v + "%";
     };
-    el("prog").onchange = (e) => {
+    el("prog").onchange = async (e) => {
       const v = clamp(Number(e.target.value)||0, 0, 100);
       t.progress = v;
       if(v >= 100){
@@ -1870,18 +2160,18 @@
         t.prevProgress = clamp(v, 0, 99);
       }
       t.updatedAt = Date.now();
-      scheduleSave();
+      await saveNow();
       renderAll();
     };
 
-    el("btnAddFile").onclick = () => {
+    el("btnAddFile").onclick = async () => {
       const name = el("fileName").value.trim();
       const url = el("fileUrl").value.trim();
       if(!name || !url) return alert("Add both a filename and a URL.");
       t.files = t.files || [];
       t.files.unshift({ name, url });
       t.updatedAt = Date.now();
-      scheduleSave();
+      await saveNow();
       el("fileName").value = "";
       el("fileUrl").value = "";
       renderFilesList(t);
@@ -1935,10 +2225,10 @@
       const del = document.createElement("button");
       del.className = "btn ghost";
       del.textContent = "Remove";
-      del.onclick = () => {
+      del.onclick = async () => {
         t.files.splice(i,1);
         t.updatedAt = Date.now();
-        scheduleSave();
+        await saveNow();
         renderFilesList(t);
         renderCards();
         renderTasksQuick();
@@ -1950,8 +2240,8 @@
     });
   }
 
-  // Actions
-  el("btnNewProject").onclick = () => {
+  // ---------------- Actions ----------------
+  el("btnNewProject").onclick = async () => {
     if(state.selectedPortfolioId === ALL_PORT_ID){
       alert("Select a portfolio (not 'All') to create a project in.");
       return;
@@ -1962,16 +2252,23 @@
     const p = { id: uid("p"), portfolioId: state.selectedPortfolioId, name: name.trim(), category: cat.trim(), progress: 0 };
     state.data.projects.unshift(p);
     state.selectedProjectId = p.id;
+
     state.selectedTaskId = null;
-    scheduleSave();
+    state.selectedTaskIds = [];
+    state.lastTaskClickIndex = null;
+
+    // If created as duplicate (same name+category), auto-merge immediately
+    const didMerge = await mergeIfDuplicate(p.id);
+    if(!didMerge){
+      await saveNow();
+    }
+
     buildCategoryFilter();
     renderAll();
     showPanel("left");
   };
 
-  el("btnPasteTasks").onclick = () => pasteClipboardTasksIntoProject(state.selectedProjectId);
-
-  el("btnDeleteProject").onclick = () => {
+  el("btnDeleteProject").onclick = async () => {
     const pid = state.selectedProjectId;
     const proj = state.data.projects.find(p => p.id === pid);
     if(!proj) return alert("No project selected.");
@@ -1981,20 +2278,22 @@
 
     state.data.projects = state.data.projects.filter(p => p.id !== pid);
     state.data.tasks = state.data.tasks.filter(t => t.projectId !== pid);
+    normalizeTaskOrder(state.data);
 
     state.selectedProjectId = firstVisibleProject()?.id || null;
-    state.selectedTaskId =
-      state.data.tasks.find(t => t.projectId === state.selectedProjectId)?.id
-      || firstVisibleTask()?.id
-      || null;
 
-    scheduleSave();
+    const tasks = getCurrentProjectTasksOrdered();
+    state.selectedTaskId = tasks[0]?.id ?? null;
+    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+    state.lastTaskClickIndex = tasks.length ? 0 : null;
+
+    await saveNow();
     buildCategoryFilter();
     renderAll();
     showPanel("mid");
   };
 
-  el("btnNewTask").onclick = () => {
+  el("btnNewTask").onclick = async () => {
     const projectId = state.selectedProjectId;
     if(!projectId) return alert("Select a project first.");
     const title = prompt("Task title?");
@@ -2002,6 +2301,8 @@
     const stage = prompt("Stage (Concept, AI Model, 3D Model, UV, Texture, Rig/Pose, Render)?", "3D Model") || "3D Model";
     const safeStage = STAGES.includes(stage) ? stage : "3D Model";
     const shortDesc = prompt("Short description (1–2 lines)?", "Next action…") || "";
+
+    const order = getCurrentProjectTasksOrdered().length;
 
     const t = {
       id: uid("t"),
@@ -2016,40 +2317,66 @@
       description: shortDesc.trim(),
       images: [ placeholderSvg(safeStage) ],
       files: [],
-      heroIndex: 0
+      heroIndex: 0,
+      order
     };
-    state.data.tasks.unshift(t);
+    state.data.tasks.push(t);
+    normalizeTaskOrder(state.data);
+
     state.selectedTaskId = t.id;
-    scheduleSave();
+    state.selectedTaskIds = [t.id];
+    state.lastTaskClickIndex = null;
+
+    await saveNow();
     renderAll();
     showPanel("right");
   };
 
-  el("btnCopyTask").onclick = () => copySelectedTaskToClipboard();
-
-  el("btnDuplicate").onclick = () => {
+  el("btnDuplicate").onclick = async () => {
     const t = getSelectedTask();
     if(!t) return;
+
     const copy = JSON.parse(JSON.stringify(t));
     copy.id = uid("t");
     copy.title = t.title + " (copy)";
     copy.updatedAt = Date.now();
-    state.data.tasks.unshift(copy);
+    copy.projectId = t.projectId;
+
+    const tasks = getCurrentProjectTasksOrdered();
+    const idx = tasks.findIndex(x=>x.id===t.id);
+    copy.order = (idx >= 0 ? idx+1 : tasks.length);
+
+    state.data.tasks.push(copy);
+    normalizeTaskOrder(state.data);
+
     state.selectedTaskId = copy.id;
-    scheduleSave();
+    state.selectedTaskIds = [copy.id];
+    state.lastTaskClickIndex = null;
+
+    await saveNow();
     renderAll();
   };
 
-  el("btnDeleteTask").onclick = () => {
+  el("btnDeleteTask").onclick = async () => {
     const t = getSelectedTask();
     if(!t) return;
-    if(!confirm("Delete this task?")) return;
-    state.data.tasks = state.data.tasks.filter(x => x.id !== t.id);
 
-    const firstTask = state.data.tasks.find(x => x.projectId === state.selectedProjectId);
-    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
+    const idsToDelete = new Set(state.selectedTaskIds.length ? state.selectedTaskIds : [t.id]);
+    if(idsToDelete.size === 1){
+      if(!confirm("Delete this task?")) return;
+    } else {
+      if(!confirm(`Delete ${idsToDelete.size} selected task(s)?`)) return;
+    }
 
-    scheduleSave();
+    state.data.tasks = state.data.tasks.filter(x => !idsToDelete.has(x.id));
+    normalizeTaskOrder(state.data);
+
+    const tasks = getCurrentProjectTasksOrdered();
+    state.selectedTaskId = tasks[0]?.id ?? null;
+    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+    state.lastTaskClickIndex = tasks.length ? 0 : null;
+
+    await saveNow();
     renderAll();
   };
 
@@ -2078,14 +2405,16 @@
         if(!json.projects || !json.tasks || !json.portfolios) throw new Error("Invalid format");
 
         state.data = json;
-
-        // Force write to IndexedDB so refresh persists even with huge images
         await saveNow();
 
         state.selectedPortfolioId = ALL_PORT_ID;
         state.categoryFilter = "all";
         state.selectedProjectId = firstVisibleProject()?.id ?? state.data.projects[0]?.id ?? null;
-        state.selectedTaskId = state.data.tasks.find(t => t.projectId === state.selectedProjectId)?.id ?? state.data.tasks[0]?.id ?? null;
+
+        const tasks = getCurrentProjectTasksOrdered();
+        state.selectedTaskId = tasks[0]?.id ?? null;
+        state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+        state.lastTaskClickIndex = tasks.length ? 0 : null;
 
         buildPortfolioSelect();
         buildCategoryFilter();
@@ -2110,8 +2439,10 @@
     state.categoryFilter = "all";
     state.selectedProjectId = null;
     state.selectedTaskId = null;
+    state.selectedTaskIds = [];
+    state.lastTaskClickIndex = null;
     state.statusFilter = "All";
-    state.sortBy = "updated";
+    state.sortBy = "order";
     state.query = "";
     state.scope = "project";
     state.clipboardTasks = [];
@@ -2127,6 +2458,14 @@
     renderAll();
   };
 
+  // Task panel buttons
+  el("btnCopyTasks").onclick = () => copySelectedTasks();
+  el("btnPasteTasks").onclick = () => pasteTasksIntoSelectedProject();
+  el("btnClearTaskSel").onclick = () => { clearTaskSelection(); ensureSelectionsAfterFilter(); renderAll(); };
+  el("btnSelectAllTasks").onclick = () => selectAllTasksInProject();
+  el("btnMoveUp").onclick = () => moveSelectedTasks(-1);
+  el("btnMoveDown").onclick = () => moveSelectedTasks(1);
+
   // Search & sort
   el("q").addEventListener("input", (e) => {
     state.query = e.target.value || "";
@@ -2135,6 +2474,34 @@
   el("sortBy").addEventListener("change", (e) => {
     state.sortBy = e.target.value;
     renderCards();
+  });
+
+  // Keyboard shortcuts
+  window.addEventListener("keydown", (e) => {
+    const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toLowerCase() : "";
+    const isTyping = tag === "input" || tag === "textarea" || document.activeElement?.isContentEditable;
+    if(isTyping) return;
+
+    if(e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")){
+      e.preventDefault();
+      moveSelectedTasks(e.key === "ArrowUp" ? -1 : 1);
+      return;
+    }
+
+    if((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C")){
+      if(state.selectedTaskIds.length){
+        e.preventDefault();
+        copySelectedTasks();
+      }
+      return;
+    }
+    if((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V")){
+      if(state.clipboardTasks.length && state.selectedProjectId){
+        e.preventDefault();
+        pasteTasksIntoSelectedProject();
+      }
+      return;
+    }
   });
 
   // Mobile panel toggles
@@ -2171,8 +2538,10 @@
       state.selectedProjectId = firstVisibleProject()?.id ?? null;
     }
 
-    const firstTask = state.data.tasks.find(t => t.projectId === state.selectedProjectId);
-    state.selectedTaskId = firstTask?.id ?? firstVisibleTask()?.id ?? null;
+    const tasks = getCurrentProjectTasksOrdered();
+    state.selectedTaskId = tasks[0]?.id ?? null;
+    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+    state.lastTaskClickIndex = tasks.length ? 0 : null;
 
     buildPortfolioSelect();
     buildScopeSelect();
@@ -2182,12 +2551,10 @@
     renderAll();
     showPanel("mid");
 
-    // Do one immediate save to migrate localStorage-only users into IDB
-    scheduleSave();
+    await saveNow();
   })();
 
 })();
 </script>
 </body>
 </html>
-```
