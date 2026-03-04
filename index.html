@@ -15,6 +15,9 @@
       --muted2: rgba(255,255,255,.42);
       --accent:#f28c28;
       --accent2:#ffb25a;
+      --good:#3bd38a;
+      --warn:#ffcc66;
+      --bad:#ff6a6a;
 
       --r:14px;
       --r2:12px;
@@ -48,7 +51,10 @@
       border-bottom: 1px solid var(--line);
     }
     .wrap{ max-width: 1600px; margin:0 auto; padding: 14px 14px; }
-    .topbar{ display:flex; align-items:center; gap:10px; justify-content: space-between; }
+    .topbar{
+      display:flex; align-items:center; gap:10px;
+      justify-content: space-between;
+    }
 
     .brand{ display:flex; align-items:center; gap:10px; min-width: 220px; }
     .logo{
@@ -87,7 +93,10 @@
       outline: none;
       appearance: none;
     }
-    option{ color: #f1f1f1; background: #2b2b2b; }
+    option{
+      color: #f1f1f1;
+      background: #2b2b2b;
+    }
 
     .btn{
       cursor:pointer;
@@ -103,7 +112,10 @@
     }
     .btn:hover{ filter: brightness(1.08); }
     .btn:active{ transform: translateY(1px); }
-    .btn.ghost{ background: rgba(255,255,255,.04); font-weight: 650; }
+    .btn.ghost{
+      background: rgba(255,255,255,.04);
+      font-weight: 650;
+    }
     .btn.danger{ background: rgba(255,106,106,.16); }
     .btn:disabled{ opacity:.45; cursor:not-allowed; filter:none; transform:none; }
 
@@ -141,9 +153,19 @@
       text-transform: uppercase;
       color: var(--muted);
     }
-    .panelBody{ padding: 10px; height: 100%; min-height: 0; }
+    .panelBody{
+      padding: 10px;
+      height: 100%;
+      min-height: 0;
+    }
 
-    .stack{ display:flex; flex-direction:column; gap: 10px; height:100%; min-height:0; }
+    .stack{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      height:100%;
+      min-height:0;
+    }
     .block{
       background: rgba(0,0,0,.10);
       border: 1px solid var(--line);
@@ -164,7 +186,11 @@
       gap: 10px;
       flex-wrap:wrap;
     }
-    .blockScroll{ padding: 8px; overflow:auto; min-height:0; }
+    .blockScroll{
+      padding: 8px;
+      overflow:auto;
+      min-height:0;
+    }
 
     .projectItem{
       display:flex; gap:10px; align-items:flex-start;
@@ -215,15 +241,6 @@
       padding-top: 2px;
     }
 
-    .taskTools{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-      width:100%;
-    }
-
     .taskRow{
       display:flex; gap:10px; align-items:center;
       padding: 9px;
@@ -244,7 +261,7 @@
       background: rgba(242,140,40,.045);
       box-shadow: 0 0 0 2px rgba(242,140,40,.12) inset;
     }
-    .taskRow.dragging{ opacity: .55; }
+    .taskRow.dragging{ opacity:.55; }
 
     .dragHandle{
       width: 18px;
@@ -291,6 +308,25 @@
     .chip.done{ border-color: rgba(59,211,138,.35); background: rgba(59,211,138,.14); color: rgba(200,255,230,.9); }
     .chip.progress{ border-color: rgba(255,204,102,.35); background: rgba(255,204,102,.13); color: rgba(255,245,220,.92); }
     .chip.todo{ border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: var(--muted); }
+
+    .taskTools{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      width:100%;
+    }
+    .pillSmall{
+      font-size: 11px;
+      font-weight: 900;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      white-space:nowrap;
+    }
 
     .middle{ display:flex; flex-direction:column; min-height:0; }
     .middleTools{
@@ -442,15 +478,6 @@
       color: var(--muted2);
       font-size: 12px;
       margin-bottom: 10px;
-    }
-    .pillSmall{
-      font-size: 11px;
-      font-weight: 900;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      color: var(--muted);
     }
     .pillSmall.stage{
       border-color: rgba(242,140,40,.35);
@@ -619,6 +646,83 @@
 
     .mobileToggles{ display:none; gap: 8px; align-items:center; }
 
+    /* Preset panel (in task block header) */
+    .presetWrap{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .modalBackdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 14px;
+      z-index: 999;
+    }
+    .modalBackdrop.show{ display:flex; }
+    .modal{
+      width: min(720px, 96vw);
+      max-height: min(82vh, 900px);
+      overflow: auto;
+      background: linear-gradient(to bottom, rgba(48,48,48,.98), rgba(43,43,43,.98));
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      padding: 12px;
+    }
+    .modalHead{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+    .modalTitle{ font-weight: 950; letter-spacing:.2px; }
+    .presetGrid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 8px;
+    }
+    .presetItem{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      border-radius: 12px;
+      padding: 10px;
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+    .presetItem input{ accent-color: var(--accent); width: 16px; height:16px; }
+    .presetName{ font-weight: 850; font-size: 13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .modalFoot{
+      margin-top: 10px;
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      border-top: 1px solid rgba(255,255,255,.10);
+      padding-top: 10px;
+    }
+    .modalFoot .row{ margin:0; }
+    .inputPill{
+      display:flex; gap:8px; align-items:center;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      border-radius: 999px;
+      padding: 8px 10px;
+    }
+    .inputPill input{
+      background: transparent;
+      border:none; outline:none;
+      color: var(--text);
+      width: 220px;
+    }
+
     @media (max-width: 1100px){
       .layout{ grid-template-columns: 320px 1fr; }
       .right{ display:none; }
@@ -634,6 +738,7 @@
       .mobileToggles{ display:flex; }
       .pill input{ width: 140px; }
       .thumbs{ grid-template-columns: repeat(4, 1fr); }
+      .presetGrid{ grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -712,7 +817,7 @@
               <span style="font-family:var(--mono); color:var(--muted2);" id="taskCount">0</span>
 
               <div class="taskTools">
-                <button class="btn ghost" id="btnAddPresetTasks" type="button" title="Create multiple tasks at once from presets">+ Presets</button>
+                <button class="btn ghost" id="btnOpenPresets" type="button" title="Create tasks from checkboxes / presets">+ Presets</button>
 
                 <button class="btn ghost" id="btnSelectAllTasks" type="button" title="Select all tasks in this project">Select all</button>
                 <button class="btn ghost" id="btnClearTaskSel" type="button" title="Clear selection">Clear</button>
@@ -764,13 +869,70 @@
   </div>
 </main>
 
+<!-- Preset modal -->
+<div class="modalBackdrop" id="presetModal">
+  <div class="modal">
+    <div class="modalHead">
+      <div>
+        <div class="modalTitle">Task presets</div>
+        <div style="color:var(--muted2); font-size:12px; margin-top:3px;">
+          Tick tasks → Create in current project. Save/load presets to reuse.
+        </div>
+      </div>
+      <button class="btn ghost" id="btnClosePreset" type="button">Close</button>
+    </div>
+
+    <div class="row" style="justify-content:space-between;">
+      <div class="row" style="gap:8px;">
+        <button class="btn ghost" id="btnPresetAll" type="button">Select all</button>
+        <button class="btn ghost" id="btnPresetNone" type="button">Select none</button>
+      </div>
+      <div class="row" style="gap:8px;">
+        <label class="pillSmall" style="display:flex; gap:8px; align-items:center;">
+          <input id="chkSkipDupTasks" type="checkbox" checked style="accent-color: var(--accent);">
+          Skip duplicates (same title)
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;" class="presetGrid" id="presetGrid"></div>
+
+    <div class="modalFoot">
+      <div class="row" style="gap:8px;">
+        <button class="btn" id="btnCreateFromChecks" type="button">Create selected tasks</button>
+        <button class="btn ghost" id="btnAddTaskToList" type="button">+ Add task name</button>
+        <button class="btn danger" id="btnRemoveCheckedFromList" type="button" title="Removes checked items from the preset list">Remove checked items</button>
+      </div>
+
+      <div class="row" style="gap:8px; justify-content:flex-end;">
+        <div class="inputPill">
+          <span style="color:var(--muted2); font-weight:900;">Preset</span>
+          <input id="presetName" placeholder="e.g. Character pipeline" />
+        </div>
+        <button class="btn ghost" id="btnSavePreset" type="button">Save</button>
+        <button class="btn ghost" id="btnLoadPreset" type="button">Load</button>
+        <button class="btn danger" id="btnDeletePreset" type="button">Delete</button>
+      </div>
+    </div>
+
+    <div style="margin-top:10px; color:var(--muted2); font-size:12px; line-height:1.35;">
+      Tip: you can keep your “master preset list” here, and save multiple named presets that reuse it.
+    </div>
+  </div>
+</div>
+
 <script>
 (() => {
-  const STORAGE_KEY = "pt_v4_jpeg_compress_select_fix";
-  const DB_NAME = "pt_store_v1";
+  // ---------------- constants ----------------
+  const STORAGE_KEY = "pt_v5_main";
+  const DB_NAME = "pt_store_v5";
   const DB_VER = 1;
   const STORE = "kv";
   const KEY_DATA = "data";
+  const KEY_PRESETS = "presets";
+  const KEY_LINK_HANDLE = "linked_file_handle";
+  const KEY_LINK_NAME = "linked_file_name";
+  const KEY_AUTO_UPDATE = "linked_auto_update";
 
   const STAGES = ["Concept","AI Model","3D Model","UV","Texture","Rig/Pose","Render"];
   const STATUS = ["Not Started","In Progress","Done"];
@@ -778,56 +940,39 @@
   const DEFAULT_PORT_ID = "port_default";
   const ALL_PORT_ID = "port_all";
 
-  const IMG = { quality: 0.82, maxEdge: 2048, mime: "image/jpeg" };
-
-  // ✅ Preset packs
-  const TASK_PRESETS = {
-    "Full pipeline (AI+3D+Texture+Rig+Render)": [
-      "AI Concept",
-      "ZBrush Sculpt",
-      "AI 3D Model",
-      "Model Cleanup",
-      "Lowres Wrap Mesh",
-      "AI Texture",
-      "UV",
-      "Texture Projection",
-      "Texture Final",
-      "AI Facial Expressions",
-      "AI Pose",
-      "Rig",
-      "Pose",
-      "Facial Expression Sculpt",
-      "Pose cleaning",
-      "Render"
-    ]
+  const IMG = {
+    quality: 0.82,
+    maxEdge: 2048,
+    mime: "image/jpeg"
   };
 
+  // Your default pipeline tasks (checkbox list)
+  const DEFAULT_TASK_LIST = [
+    "AI Concept",
+    "ZBrush Sculpt",
+    "AI 3D Model",
+    "Model Cleanup",
+    "Lowres Wrap Mesh",
+    "AI Texture",
+    "UV",
+    "Texture Projection",
+    "Texture Final",
+    "AI Facial Expressions",
+    "AI Pose",
+    "Rig",
+    "Pose",
+    "Facial Expression Sculpt",
+    "Pose cleaning",
+    "Render"
+  ];
+
+  // ---------------- helpers ----------------
   const el = (id) => document.getElementById(id);
-
-  const state = {
-    data: null,
-    selectedPortfolioId: DEFAULT_PORT_ID,
-    selectedProjectId: null,
-
-    selectedTaskId: null,
-    selectedTaskIds: [],
-    lastTaskClickIndex: null,
-
-    statusFilter: "All",
-    sortBy: "order",
-    query: "",
-    scope: "project",
-    categoryFilter: "all",
-
-    clipboardTasks: [],
-  };
-
   function uid(prefix="id"){
     return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
   }
   function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
   function norm(s){ return String(s||"").trim().toLowerCase(); }
-
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
@@ -854,99 +999,7 @@
     return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   }
 
-  function defaultData(){
-    const portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
-
-    const p1 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Fantasy Creature", category:"Dragon", progress: 0 };
-    const p2 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Fixelpuck Mascot", category:"Mascot", progress: 0 };
-    const p3 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Sci-Fi Prop Set", category:"Props", progress: 0 };
-
-    const now = Date.now();
-    const mkTask = (projectId, stage, title, shortDesc, status, progress, updatedAtOffset=0, order=0) => ({
-      id: uid("t"),
-      projectId,
-      stage,
-      title,
-      shortDesc,
-      status,
-      progress,
-      prevProgress: progress,
-      updatedAt: now - updatedAtOffset,
-      description: shortDesc + "\n\nNotes:\n- ",
-      images: [ placeholderSvg(stage) ],
-      files: [{ name: "Reference board", url: "https://example.com" }],
-      heroIndex: 0,
-      order
-    });
-
-    const tasks = [
-      mkTask(p1.id,"Concept","Silhouette exploration","10 fast silhouettes, pick top 3.", "In Progress", 45, 1000*60*10, 0),
-      mkTask(p1.id,"AI Model","Midjourney / SD pass","Generate 6 variants matching silhouette.", "Not Started", 0, 1000*60*60*2, 1),
-      mkTask(p1.id,"3D Model","Base sculpt","Primary forms + proportions locked.", "In Progress", 30, 1000*60*30, 2),
-
-      mkTask(p2.id,"Concept","Logo + shape language","Blocky, cute, readable from far.", "Done", 100, 1000*60*60*72, 0),
-      mkTask(p2.id,"3D Model","Clean topology pass","Animation friendly edgeflow.", "In Progress", 70, 1000*60*60*20, 1),
-
-      mkTask(p3.id,"Concept","Prop list + refs","Collect 20 refs per prop.", "In Progress", 25, 1000*60*60*4, 0),
-    ];
-
-    return { portfolios, projects: [p1,p2,p3], tasks };
-  }
-
-  function migrateData(d){
-    if(!d || typeof d !== "object") d = defaultData();
-
-    if(!d.portfolios) d.portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
-    if(!d.portfolios.find(p => p.id === DEFAULT_PORT_ID)) d.portfolios.unshift({ id: DEFAULT_PORT_ID, name: "Default" });
-
-    d.projects = Array.isArray(d.projects) ? d.projects : [];
-    d.tasks = Array.isArray(d.tasks) ? d.tasks : [];
-
-    d.projects.forEach(p => {
-      if(!p.portfolioId) p.portfolioId = DEFAULT_PORT_ID;
-      if(typeof p.category !== "string") p.category = "";
-      if(typeof p.name !== "string") p.name = "Project";
-    });
-
-    d.tasks.forEach(t => {
-      if(typeof t.prevProgress !== "number") t.prevProgress = Number(t.progress) || 0;
-      if(!Array.isArray(t.images)) t.images = [];
-      if(!Array.isArray(t.files)) t.files = [];
-      if(typeof t.heroIndex !== "number") t.heroIndex = 0;
-      if(typeof t.projectId !== "string") t.projectId = "";
-      if(typeof t.title !== "string") t.title = "Task";
-      if(typeof t.stage !== "string" || !STAGES.includes(t.stage)) t.stage = "3D Model";
-      if(typeof t.status !== "string" || !STATUS.includes(t.status)) t.status = "Not Started";
-      if(typeof t.progress !== "number") t.progress = Number(t.progress) || 0;
-      if(typeof t.updatedAt !== "number") t.updatedAt = Date.now();
-      if(typeof t.order !== "number") t.order = -1;
-    });
-
-    normalizeTaskOrder(d);
-    return d;
-  }
-
-  function normalizeTaskOrder(d){
-    const byProject = new Map();
-    for(const t of (d.tasks||[])){
-      if(!byProject.has(t.projectId)) byProject.set(t.projectId, []);
-      byProject.get(t.projectId).push(t);
-    }
-    for(const [pid, arr] of byProject.entries()){
-      arr.sort((a,b)=>{
-        const ao = (typeof a.order==="number" ? a.order : -1);
-        const bo = (typeof b.order==="number" ? b.order : -1);
-        const aHas = ao >= 0, bHas = bo >= 0;
-        if(aHas && bHas) return ao - bo;
-        if(aHas && !bHas) return -1;
-        if(!aHas && bHas) return 1;
-        return (b.updatedAt||0) - (a.updatedAt||0);
-      });
-      arr.forEach((t,i)=>{ t.order = i; });
-    }
-  }
-
-  // ---------------- IndexedDB helpers ----------------
+  // ---------------- storage (IndexedDB + localStorage fallback) ----------------
   function openDb(){
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VER);
@@ -1018,32 +1071,292 @@
   }
 
   window.addEventListener("visibilitychange", () => {
-    if(document.visibilityState === "hidden"){
-      saveNow();
-    }
+    if(document.visibilityState === "hidden") saveNow();
   });
 
-  // ---------------- Multi-select helpers ----------------
+  // ---------------- data model ----------------
+  const state = {
+    data: null,
+    selectedPortfolioId: DEFAULT_PORT_ID,
+    selectedProjectId: null,
+
+    selectedTaskId: null,
+    selectedTaskIds: [],
+    lastTaskClickIndex: null,
+
+    statusFilter: "All",
+    sortBy: "order",
+    query: "",
+    scope: "project",
+    categoryFilter: "all",
+
+    clipboardTasks: [],
+
+    // presets data stored separately
+    presets: {
+      // "presetName": ["task1","task2",...]
+    },
+
+    // linked file (File System Access API)
+    linkedHandle: null,
+    linkedFileName: "",
+    autoUpdateEnabled: false,
+  };
+
+  function defaultData(){
+    const portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
+
+    const p1 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Fantasy Creature", category:"Dragon", progress: 0 };
+    const p2 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Fixelpuck Mascot", category:"Mascot", progress: 0 };
+    const p3 = { id: uid("p"), portfolioId: DEFAULT_PORT_ID, name:"Sci-Fi Prop Set", category:"Props", progress: 0 };
+
+    const now = Date.now();
+    const mkTask = (projectId, stage, title, shortDesc, status, progress, updatedAtOffset=0, order=0) => ({
+      id: uid("t"),
+      projectId,
+      stage,
+      title,
+      shortDesc,
+      status,
+      progress,
+      prevProgress: progress,
+      updatedAt: now - updatedAtOffset,
+      description: shortDesc + "\n\nNotes:\n- ",
+      images: [ placeholderSvg(stage) ],
+      files: [{ name: "Reference board", url: "https://example.com" }],
+      heroIndex: 0,
+      order
+    });
+
+    const tasks = [
+      mkTask(p1.id,"Concept","Silhouette exploration","10 fast silhouettes, pick top 3.", "In Progress", 45, 1000*60*10, 0),
+      mkTask(p1.id,"AI Model","Midjourney / SD pass","Generate 6 variants matching silhouette.", "Not Started", 0, 1000*60*60*2, 1),
+      mkTask(p1.id,"3D Model","Base sculpt","Primary forms + proportions locked.", "In Progress", 30, 1000*60*30, 2),
+
+      mkTask(p2.id,"Concept","Logo + shape language","Blocky, cute, readable from far.", "Done", 100, 1000*60*60*72, 0),
+      mkTask(p2.id,"3D Model","Clean topology pass","Animation friendly edgeflow.", "In Progress", 70, 1000*60*60*20, 1),
+
+      mkTask(p3.id,"Concept","Prop list + refs","Collect 20 refs per prop.", "In Progress", 25, 1000*60*60*4, 0),
+    ];
+
+    return { portfolios, projects: [p1,p2,p3], tasks };
+  }
+
+  function migrateData(d){
+    if(!d || typeof d !== "object") d = defaultData();
+
+    if(!d.portfolios) d.portfolios = [{ id: DEFAULT_PORT_ID, name: "Default" }];
+    if(!d.portfolios.find(p => p.id === DEFAULT_PORT_ID)) d.portfolios.unshift({ id: DEFAULT_PORT_ID, name: "Default" });
+
+    d.projects = Array.isArray(d.projects) ? d.projects : [];
+    d.tasks = Array.isArray(d.tasks) ? d.tasks : [];
+
+    d.projects.forEach(p => {
+      if(!p.portfolioId) p.portfolioId = DEFAULT_PORT_ID;
+      if(typeof p.category !== "string") p.category = "";
+      if(typeof p.name !== "string") p.name = "Project";
+      if(typeof p.id !== "string") p.id = uid("p");
+    });
+
+    d.tasks.forEach(t => {
+      if(typeof t.id !== "string") t.id = uid("t");
+      if(typeof t.prevProgress !== "number") t.prevProgress = Number(t.progress) || 0;
+      if(!Array.isArray(t.images)) t.images = [];
+      if(!Array.isArray(t.files)) t.files = [];
+      if(typeof t.heroIndex !== "number") t.heroIndex = 0;
+      if(typeof t.projectId !== "string") t.projectId = "";
+      if(typeof t.title !== "string") t.title = "Task";
+      if(typeof t.stage !== "string") t.stage = "3D Model";
+      if(typeof t.status !== "string") t.status = "Not Started";
+      if(typeof t.progress !== "number") t.progress = Number(t.progress) || 0;
+      if(typeof t.updatedAt !== "number") t.updatedAt = Date.now();
+      if(typeof t.order !== "number") t.order = -1;
+    });
+
+    normalizeTaskOrder(d);
+    // remove any tasks pointing to missing projects (keep them? you can change this)
+    const projIds = new Set(d.projects.map(p=>p.id));
+    d.tasks = d.tasks.filter(t => projIds.has(t.projectId));
+
+    return d;
+  }
+
+  function normalizeTaskOrder(d){
+    const byProject = new Map();
+    for(const t of (d.tasks||[])){
+      if(!byProject.has(t.projectId)) byProject.set(t.projectId, []);
+      byProject.get(t.projectId).push(t);
+    }
+    for(const [pid, arr] of byProject.entries()){
+      arr.sort((a,b)=>{
+        const ao = (typeof a.order==="number" ? a.order : -1);
+        const bo = (typeof b.order==="number" ? b.order : -1);
+        const aHas = ao >= 0, bHas = bo >= 0;
+        if(aHas && bHas) return ao - bo;
+        if(aHas && !bHas) return -1;
+        if(!aHas && bHas) return 1;
+        return (b.updatedAt||0) - (a.updatedAt||0);
+      });
+      arr.forEach((t,i)=>{ t.order = i; });
+    }
+  }
+
+  // ---------------- File System Access API linking (Edge/Chrome) ----------------
+  const hasFSA = !!window.showOpenFilePicker && !!window.showSaveFilePicker;
+
+  async function loadLinkedSettings(){
+    try{
+      const h = await idbGet(KEY_LINK_HANDLE);
+      if(h) state.linkedHandle = h;
+    }catch(_){ state.linkedHandle = null; }
+
+    try{
+      const nm = await idbGet(KEY_LINK_NAME);
+      if(nm) state.linkedFileName = nm;
+    }catch(_){ state.linkedFileName = ""; }
+
+    try{
+      const au = await idbGet(KEY_AUTO_UPDATE);
+      state.autoUpdateEnabled = !!au;
+    }catch(_){ state.autoUpdateEnabled = false; }
+  }
+
+  async function setAutoUpdateEnabled(v){
+    state.autoUpdateEnabled = !!v;
+    await idbSet(KEY_AUTO_UPDATE, state.autoUpdateEnabled).catch(()=>{});
+  }
+
+  async function linkToJsonFile(){
+    if(!hasFSA){
+      alert("Your browser doesn't support linking a file (File System Access API). Use Import instead.");
+      return;
+    }
+    try{
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: "JSON", accept: { "application/json": [".json"] } }],
+        multiple: false
+      });
+      if(!handle) return;
+
+      state.linkedHandle = handle;
+      state.linkedFileName = handle.name || "linked.json";
+
+      await idbSet(KEY_LINK_HANDLE, handle).catch(()=>{});
+      await idbSet(KEY_LINK_NAME, state.linkedFileName).catch(()=>{});
+
+      const canRead = await verifyPermission(handle, "read");
+      if(!canRead){
+        alert("Linked file selected, but read permission was not granted.");
+      }else{
+        await importFromLinkedFile({ silent: true });
+        alert(`Linked to: ${state.linkedFileName}\n\nTip: enable Auto update to re-read on reload.`);
+      }
+    }catch(e){
+      // user cancelled
+    }
+  }
+
+  async function verifyPermission(handle, mode){
+    if(!handle) return false;
+    try{
+      const opts = { mode: mode === "write" ? "readwrite" : "read" };
+      if((await handle.queryPermission(opts)) === "granted") return true;
+      if((await handle.requestPermission(opts)) === "granted") return true;
+      return false;
+    }catch(_){
+      return false;
+    }
+  }
+
+  async function readHandleText(handle){
+    const file = await handle.getFile();
+    return await file.text();
+  }
+
+  async function writeHandleText(handle, text){
+    const ok = await verifyPermission(handle, "write");
+    if(!ok) throw new Error("Write permission denied");
+    const writable = await handle.createWritable();
+    await writable.write(text);
+    await writable.close();
+  }
+
+  async function importFromLinkedFile({ silent=false } = {}){
+    if(!state.linkedHandle) throw new Error("No linked file.");
+    const ok = await verifyPermission(state.linkedHandle, "read");
+    if(!ok) throw new Error("Read permission denied.");
+    const text = await readHandleText(state.linkedHandle);
+    const json = migrateData(JSON.parse(text));
+    if(!json.projects || !json.tasks || !json.portfolios) throw new Error("Invalid format");
+    state.data = json;
+    normalizeTaskOrder(state.data);
+    await saveNow();
+    buildPortfolioSelect();
+    buildCategoryFilter();
+    ensureSelectionsAfterFilter();
+    renderAll();
+    if(!silent) alert("Loaded linked file.");
+  }
+
+  async function exportToLinkedFile(){
+    if(!hasFSA){
+      alert("Your browser doesn't support linking a file (File System Access API). Use Export instead.");
+      return;
+    }
+    if(!state.linkedHandle){
+      // pick create file
+      try{
+        const handle = await window.showSaveFilePicker({
+          suggestedName: "project-tracker.json",
+          types: [{ description: "JSON", accept: { "application/json": [".json"] } }],
+        });
+        if(!handle) return;
+        state.linkedHandle = handle;
+        state.linkedFileName = handle.name || "project-tracker.json";
+        await idbSet(KEY_LINK_HANDLE, handle).catch(()=>{});
+        await idbSet(KEY_LINK_NAME, state.linkedFileName).catch(()=>{});
+      }catch(_){ return; }
+    }
+    try{
+      const text = JSON.stringify(state.data, null, 2);
+      await writeHandleText(state.linkedHandle, text);
+      alert(`Saved to linked file:\n${state.linkedFileName || "linked.json"}`);
+    }catch(e){
+      alert("Save to linked file failed: " + (e.message || e));
+    }
+  }
+
+  // optional auto-update on reload
+  async function maybeAutoUpdateOnLoad(){
+    if(!state.autoUpdateEnabled) return;
+    if(!state.linkedHandle) return;
+    try{
+      await importFromLinkedFile({ silent: true });
+      // no alert on load
+    }catch(_){
+      // silently ignore (file moved, permission revoked, etc.)
+    }
+  }
+
+  // ---------------- multi-select helpers ----------------
+  function clearTaskSelection(){
+    state.selectedTaskIds = [];
+    state.selectedTaskId = null;
+    state.lastTaskClickIndex = null;
+  }
   function setPrimaryTask(taskId){
     state.selectedTaskId = taskId;
     if(taskId && !state.selectedTaskIds.includes(taskId)){
       state.selectedTaskIds = [taskId];
     }
   }
-
-  function clearTaskSelection(){
-    state.selectedTaskIds = [];
-    state.selectedTaskId = null;
-    state.lastTaskClickIndex = null;
-  }
-
   function getCurrentProjectTasksOrdered(){
     if(!state.selectedProjectId) return [];
     const pid = state.selectedProjectId;
     return state.data.tasks
       .filter(t => t.projectId === pid)
       .slice()
-      .sort((a,b)=> (a.order||0) - (b.order||0) || (b.updatedAt||0) - (a.updatedAt||0));
+      .sort((a,b)=> (a.order||0) - (b.order||0) || (b.updatedAt||0)-(a.updatedAt||0));
   }
 
   function toggleTaskSelection(taskId, idxInList, evt){
@@ -1098,10 +1411,6 @@
     el("btnMoveDown").disabled = selCount === 0;
     el("btnClearTaskSel").disabled = selCount === 0;
     el("btnSelectAllTasks").disabled = !hasProject;
-
-    el("btnPasteTasks").title = hasClipboard
-      ? `Paste ${state.clipboardTasks.length} copied task(s) into this project`
-      : "Paste copied tasks into this project";
   }
 
   function copySelectedTasks(){
@@ -1156,7 +1465,7 @@
     updateTaskPanelButtons();
   }
 
-  // ---------------- Reordering ----------------
+  // ---------------- reordering ----------------
   function applyReorderForProject(pid, orderedIds){
     const set = new Set(orderedIds);
     let idx = 0;
@@ -1205,7 +1514,6 @@
   }
 
   let dragTaskId = null;
-
   function handleTaskDragStart(e, taskId){
     dragTaskId = taskId;
     e.dataTransfer.effectAllowed = "move";
@@ -1236,8 +1544,7 @@
     if(fromIdx === -1 || toIdx === -1) return;
 
     ids.splice(fromIdx, 1);
-    const insertAt = toIdx;
-    ids.splice(insertAt, 0, fromId);
+    ids.splice(toIdx, 0, fromId);
 
     applyReorderForProject(pid, ids);
     await saveNow();
@@ -1245,7 +1552,90 @@
     renderCards();
   }
 
-  // ---------------- Presets: create multiple tasks ----------------
+  // ---------------- presets (checkbox UI + saved named presets) ----------------
+  function defaultPresetsObject(){
+    return {
+      "Default pipeline": DEFAULT_TASK_LIST.slice()
+    };
+  }
+
+  async function loadPresets(){
+    try{
+      const p = await idbGet(KEY_PRESETS);
+      if(p && typeof p === "object"){
+        state.presets = p;
+        return;
+      }
+    }catch(_){}
+
+    // fallback from localStorage
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY + "_presets");
+      if(raw){
+        state.presets = JSON.parse(raw);
+        return;
+      }
+    }catch(_){}
+
+    state.presets = defaultPresetsObject();
+    await savePresets();
+  }
+
+  async function savePresets(){
+    await idbSet(KEY_PRESETS, state.presets).catch(()=>{});
+    try{ localStorage.setItem(STORAGE_KEY + "_presets", JSON.stringify(state.presets)); }catch(_){}
+  }
+
+  function openPresetModal(){
+    el("presetModal").classList.add("show");
+    renderPresetGrid();
+  }
+  function closePresetModal(){
+    el("presetModal").classList.remove("show");
+  }
+
+  function getMasterTaskList(){
+    // master list = union of all presets + default list
+    const set = new Set(DEFAULT_TASK_LIST.map(x=>x.trim()).filter(Boolean));
+    for(const k of Object.keys(state.presets || {})){
+      (state.presets[k]||[]).forEach(x => set.add(String(x||"").trim()));
+    }
+    return Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  }
+
+  function renderPresetGrid(checkedSet = null){
+    const grid = el("presetGrid");
+    grid.innerHTML = "";
+    const list = getMasterTaskList();
+    const set = checkedSet || new Set();
+
+    list.forEach(name => {
+      const row = document.createElement("label");
+      row.className = "presetItem";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = set.has(name);
+      cb.dataset.name = name;
+
+      const txt = document.createElement("div");
+      txt.style.minWidth = "0";
+      const nm = document.createElement("div");
+      nm.className = "presetName";
+      nm.textContent = name;
+      txt.appendChild(nm);
+
+      row.appendChild(cb);
+      row.appendChild(txt);
+      grid.appendChild(row);
+    });
+  }
+
+  function getCheckedPresetItems(){
+    const boxes = Array.from(el("presetGrid").querySelectorAll("input[type=checkbox]"));
+    return boxes.filter(b=>b.checked).map(b => b.dataset.name).filter(Boolean);
+  }
+
   function inferStageFromTitle(title){
     const t = norm(title);
     if(t.includes("concept")) return "Concept";
@@ -1253,51 +1643,40 @@
     if(t.includes("zbrush") || t.includes("sculpt") || t.includes("model") || t.includes("cleanup") || t.includes("wrap")) return "3D Model";
     if(t === "uv" || t.includes(" uv")) return "UV";
     if(t.includes("texture")) return "Texture";
-    if(t.includes("rig") || t.includes("pose") || t.includes("facial expression")) return "Rig/Pose";
+    if(t.includes("rig") || t.includes("pose") || t.includes("facial")) return "Rig/Pose";
     if(t.includes("render")) return "Render";
     return "3D Model";
   }
 
-  function splitLines(text){
-    return String(text || "")
-      .replace(/\r/g, "")
-      .split("\n")
-      .map(s => s.trim())
-      .filter(Boolean);
-  }
-
-  async function createTasksFromList({ projectId, titles, skipDuplicates=true }){
+  async function createTasksFromTitles(projectId, titles, { skipDuplicates=true } = {}){
     if(!projectId) return { created:0, skipped:0 };
-
-    const existing = state.data.tasks
-      .filter(t => t.projectId === projectId)
-      .map(t => norm(t.title));
-
-    const existingSet = new Set(existing);
+    const existingTitles = new Set(
+      state.data.tasks.filter(t => t.projectId === projectId).map(t => norm(t.title))
+    );
 
     const tasks = getCurrentProjectTasksOrdered();
     let nextOrder = tasks.length;
-
-    let created = 0;
-    let skipped = 0;
-
+    let created=0, skipped=0;
     const now = Date.now();
 
     for(const title of titles){
-      const tNorm = norm(title);
-      if(skipDuplicates && existingSet.has(tNorm)){
+      const name = String(title||"").trim();
+      if(!name) continue;
+      const key = norm(name);
+
+      if(skipDuplicates && existingTitles.has(key)){
         skipped++;
         continue;
       }
-      existingSet.add(tNorm);
+      existingTitles.add(key);
 
-      const stage = inferStageFromTitle(title);
+      const stage = inferStageFromTitle(name);
 
-      const task = {
+      const t = {
         id: uid("t"),
         projectId,
         stage,
-        title: title.trim(),
+        title: name,
         shortDesc: "",
         status: "Not Started",
         progress: 0,
@@ -1309,8 +1688,7 @@
         heroIndex: 0,
         order: nextOrder++
       };
-
-      state.data.tasks.push(task);
+      state.data.tasks.push(t);
       created++;
     }
 
@@ -1319,47 +1697,7 @@
     return { created, skipped };
   }
 
-  async function showPresetTaskCreator(){
-    const pid = state.selectedProjectId;
-    if(!pid) return alert("Select a project first.");
-
-    const names = Object.keys(TASK_PRESETS);
-    const defaultName = names[0] || "Custom";
-    const pack = prompt(
-      `Preset pack name?\n\nAvailable:\n- ${names.join("\n- ")}\n\nType one of the names above, or type "Custom".`,
-      defaultName
-    );
-    if(pack === null) return;
-
-    let list = [];
-    if(TASK_PRESETS[pack]){
-      list = TASK_PRESETS[pack].slice();
-    }else{
-      const txt = prompt(
-        "Paste task titles (one per line):",
-        TASK_PRESETS[defaultName]?.join("\n") || ""
-      );
-      if(txt === null) return;
-      list = splitLines(txt);
-    }
-
-    if(list.length === 0) return alert("No tasks provided.");
-
-    const skipDup = confirm("Skip duplicates (same title) in this project?\nOK = skip duplicates\nCancel = create anyway");
-    const res = await createTasksFromList({ projectId: pid, titles: list, skipDuplicates: skipDup });
-
-    // Select the project’s first task for convenience
-    const ordered = getCurrentProjectTasksOrdered();
-    state.selectedTaskId = ordered[0]?.id ?? null;
-    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
-    state.lastTaskClickIndex = ordered.length ? 0 : null;
-
-    buildStatusFilters();
-    renderAll();
-    alert(`Preset tasks added.\nCreated: ${res.created}\nSkipped: ${res.skipped}`);
-  }
-
-  // ---------------- UI & filtering ----------------
+  // ---------------- UI logic ----------------
   function statusToChipClass(s){
     if(s==="Done") return "done";
     if(s==="In Progress") return "progress";
@@ -1370,19 +1708,16 @@
     if(s==="In Progress") return "progress";
     return "todo";
   }
-
   function computeProjectProgress(projectId){
     const tasks = state.data.tasks.filter(t => t.projectId === projectId);
     if(tasks.length === 0) return 0;
     const avg = tasks.reduce((a,t)=>a + (Number(t.progress)||0), 0) / tasks.length;
     return Math.round(clamp(avg,0,100));
   }
-
   function currentPortfolioProjects(){
     if(state.selectedPortfolioId === ALL_PORT_ID) return state.data.projects.slice();
     return state.data.projects.filter(p => p.portfolioId === state.selectedPortfolioId);
   }
-
   function visibleProjects(){
     let projs = currentPortfolioProjects();
     if(state.categoryFilter !== "all"){
@@ -1390,7 +1725,6 @@
     }
     return projs;
   }
-
   function firstVisibleProject(){ return visibleProjects()[0] || null; }
 
   function ensureSelectionsAfterFilter(){
@@ -1625,6 +1959,47 @@
     input.select();
   }
 
+  // ---------------- project merge-on-rename ----------------
+  function findProjectByNameCat(portfolioId, name, category, excludeId){
+    const n = norm(name);
+    const c = norm(category);
+    return state.data.projects.find(p =>
+      p.id !== excludeId &&
+      (portfolioId ? p.portfolioId === portfolioId : true) &&
+      norm(p.name) === n &&
+      norm(p.category) === c
+    ) || null;
+  }
+
+  async function mergeProjects(sourceId, targetId){
+    if(sourceId === targetId) return;
+    const src = state.data.projects.find(p => p.id === sourceId);
+    const tgt = state.data.projects.find(p => p.id === targetId);
+    if(!src || !tgt) return;
+
+    // move tasks
+    state.data.tasks.forEach(t => {
+      if(t.projectId === src.id){
+        t.projectId = tgt.id;
+      }
+    });
+
+    // remove source project
+    state.data.projects = state.data.projects.filter(p => p.id !== src.id);
+
+    normalizeTaskOrder(state.data);
+
+    // fix selection
+    if(state.selectedProjectId === src.id) state.selectedProjectId = tgt.id;
+
+    const tasks = getCurrentProjectTasksOrdered();
+    state.selectedTaskId = tasks[0]?.id ?? null;
+    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+    state.lastTaskClickIndex = tasks.length ? 0 : null;
+
+    await saveNow();
+  }
+
   function renderProjects(){
     const list = el("projectsList");
     list.innerHTML = "";
@@ -1673,7 +2048,24 @@
         const cur = (p.category || "").trim();
         const next = prompt("Project category (e.g. Dragon):", cur);
         if(next === null) return;
-        p.category = next.trim();
+
+        const newCat = next.trim();
+
+        // if changing category creates duplicate name+category, merge
+        const dup = findProjectByNameCat(p.portfolioId, p.name, newCat, p.id);
+        if(dup){
+          if(confirm(`A project with the same name + category exists.\n\nMerge "${p.name}" (${cur||"—"}) into "${dup.name}" (${newCat||"—"})?`)){
+            // set category first for consistency, then merge
+            p.category = newCat;
+            await mergeProjects(p.id, dup.id);
+            buildCategoryFilter();
+            ensureSelectionsAfterFilter();
+            renderAll();
+            return;
+          }
+        }
+
+        p.category = newCat;
         await saveNow();
         buildCategoryFilter();
         ensureSelectionsAfterFilter();
@@ -1688,11 +2080,34 @@
       editBtn.onclick = (e) => {
         e.preventDefault(); e.stopPropagation();
         state.selectedProjectId = p.id;
+
         beginInlineEdit({
           mountEl: nameRow,
           initialValue: p.name,
           onSave: async (val) => {
-            p.name = val.trim();
+            const newName = val.trim();
+            const curCat = (p.category || "").trim();
+
+            // merge if same name+category exists in same portfolio
+            const dup = findProjectByNameCat(p.portfolioId, newName, curCat, p.id);
+            if(dup){
+              // IMPORTANT: keep tasks by merging BEFORE you remove anything else
+              if(confirm(`A project with the same name + category already exists.\n\nMerge "${p.name}" into "${dup.name}"?`)){
+                p.name = newName;
+                await mergeProjects(p.id, dup.id);
+                buildCategoryFilter();
+                ensureSelectionsAfterFilter();
+                renderAll();
+                return;
+              } else {
+                // user cancelled merge → do nothing
+                renderProjects();
+                return;
+              }
+            }
+
+            // no duplicate → rename normally
+            p.name = newName;
             await saveNow();
             renderAll();
           },
@@ -1940,7 +2355,7 @@
     return state.data.tasks.find(t => t.id === state.selectedTaskId) || null;
   }
 
-  // --- JPEG upload helpers ---
+  // ---------------- image compression ----------------
   function loadImageFromFile(file){
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
@@ -2056,6 +2471,10 @@
     const heroUrl = t.images?.[t.heroIndex||0] || placeholderSvg(t.stage);
     const thumbs = (t.images || []).slice(0, 10);
 
+    const linkedInfo = (hasFSA && state.linkedHandle)
+      ? `<span class="pillSmall" style="font-family:var(--mono);">Linked: ${escapeHtml(state.linkedFileName || "file")}</span>`
+      : "";
+
     root.innerHTML = `
       <div>
         <div class="row" style="align-items:flex-start; justify-content:space-between; flex-wrap:nowrap;">
@@ -2071,6 +2490,7 @@
           <span class="pillSmall">${escapeHtml(project?.name || "Unknown project")}</span>
           <span class="pillSmall">${escapeHtml(portfolio?.name || "Unknown portfolio")}</span>
           <span class="pillSmall" style="font-family:var(--mono);">Task ID: ${escapeHtml(t.id)}</span>
+          ${linkedInfo}
           <span style="font-family:var(--mono); color:var(--muted2);">Updated: ${new Date(t.updatedAt||Date.now()).toLocaleString()}</span>
         </div>
 
@@ -2125,6 +2545,24 @@
             <input id="fileName" placeholder="Filename (e.g. turntable.blend)" style="flex:1; min-width:180px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:var(--text); padding:10px 12px; outline:none;">
             <input id="fileUrl" placeholder="URL (Drive, Dropbox, etc.)" style="flex:1; min-width:180px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:var(--text); padding:10px 12px; outline:none;">
             <button class="btn" id="btnAddFile">Add</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Shared JSON (optional)</h3>
+          <div class="row" style="gap:8px;">
+            <button class="btn ghost" id="btnLinkFile" type="button">Link JSON…</button>
+            <button class="btn ghost" id="btnLoadLinked" type="button" ${(!hasFSA || !state.linkedHandle) ? "disabled" : ""}>Load linked</button>
+            <button class="btn ghost" id="btnSaveLinked" type="button" ${(!hasFSA) ? "disabled" : ""}>Save to linked</button>
+            <label class="pillSmall" style="display:flex; gap:8px; align-items:center;">
+              <input id="chkAutoUpdate" type="checkbox" ${state.autoUpdateEnabled ? "checked" : ""} ${(!hasFSA) ? "disabled" : ""} style="accent-color: var(--accent);">
+              Auto update on reload
+            </label>
+          </div>
+          <div style="margin-top:8px; color:var(--muted2); font-size:12px; line-height:1.35;">
+            Best for multi-workstation: store the JSON in a shared folder (OneDrive/Dropbox/SMB share),
+            link it in Edge/Chrome, then enable Auto update.
+            Firefox: use Import/Export.
           </div>
         </div>
       </div>
@@ -2235,6 +2673,18 @@
       renderCards();
       renderTasksQuick();
     };
+
+    // Linked JSON controls
+    el("btnLinkFile").onclick = () => linkToJsonFile();
+    el("btnLoadLinked").onclick = async () => {
+      try{ await importFromLinkedFile(); }
+      catch(e){ alert("Load linked failed: " + (e.message || e)); }
+    };
+    el("btnSaveLinked").onclick = () => exportToLinkedFile();
+    el("chkAutoUpdate").onchange = async (e) => {
+      await setAutoUpdateEnabled(!!e.target.checked);
+      renderDetail();
+    };
   }
 
   function renderFilesList(t){
@@ -2307,13 +2757,25 @@
     if(!name) return;
     const cat = prompt("Category? (optional, e.g. Dragon)", "") ?? "";
     const p = { id: uid("p"), portfolioId: state.selectedPortfolioId, name: name.trim(), category: cat.trim(), progress: 0 };
+
+    // If same name+cat exists, merge (i.e. just select existing)
+    const dup = findProjectByNameCat(p.portfolioId, p.name, p.category, null);
+    if(dup){
+      if(confirm(`Project already exists with same name + category.\n\nSelect existing project instead?`)){
+        state.selectedProjectId = dup.id;
+        const tasks = getCurrentProjectTasksOrdered();
+        state.selectedTaskId = tasks[0]?.id ?? null;
+        state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+        state.lastTaskClickIndex = tasks.length ? 0 : null;
+        renderAll();
+        return;
+      }
+    }
+
     state.data.projects.unshift(p);
     state.selectedProjectId = p.id;
 
-    state.selectedTaskId = null;
-    state.selectedTaskIds = [];
-    state.lastTaskClickIndex = null;
-
+    clearTaskSelection();
     await saveNow();
     buildCategoryFilter();
     renderAll();
@@ -2350,8 +2812,8 @@
     if(!projectId) return alert("Select a project first.");
     const title = prompt("Task title?");
     if(!title) return;
-    const stage = prompt("Stage (Concept, AI Model, 3D Model, UV, Texture, Rig/Pose, Render)?", "3D Model") || "3D Model";
-    const safeStage = STAGES.includes(stage) ? stage : "3D Model";
+    const stage = prompt("Stage (Concept, AI Model, 3D Model, UV, Texture, Rig/Pose, Render)?", inferStageFromTitle(title)) || inferStageFromTitle(title);
+    const safeStage = STAGES.includes(stage) ? stage : inferStageFromTitle(title);
     const shortDesc = prompt("Short description (1–2 lines)?", "Next action…") || "";
 
     const order = getCurrentProjectTasksOrdered().length;
@@ -2432,6 +2894,7 @@
     renderAll();
   };
 
+  // Export / Import (fix: always loads actual file content; never falls back to defaults)
   el("btnExport").onclick = () => {
     const blob = new Blob([JSON.stringify(state.data, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
@@ -2453,10 +2916,13 @@
       if(!file) return;
       try{
         const text = await file.text();
-        const json = migrateData(JSON.parse(text));
-        if(!json.projects || !json.tasks || !json.portfolios) throw new Error("Invalid format");
+        const parsed = JSON.parse(text);
+        const json = migrateData(parsed);
 
+        if(!json.projects || !json.tasks || !json.portfolios) throw new Error("Invalid format");
         state.data = json;
+
+        normalizeTaskOrder(state.data);
         await saveNow();
 
         state.selectedPortfolioId = ALL_PORT_ID;
@@ -2485,22 +2951,31 @@
     if(!confirm("Reset ALL data on this device?")) return;
 
     try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+    try{ localStorage.removeItem(STORAGE_KEY + "_presets"); }catch(_){}
     try{ await idbDel(KEY_DATA); }catch(_){}
+    try{ await idbDel(KEY_PRESETS); }catch(_){}
+    try{ await idbDel(KEY_LINK_HANDLE); }catch(_){}
+    try{ await idbDel(KEY_LINK_NAME); }catch(_){}
+    try{ await idbDel(KEY_AUTO_UPDATE); }catch(_){}
 
+    // reset runtime state
     state.selectedPortfolioId = DEFAULT_PORT_ID;
     state.categoryFilter = "all";
     state.selectedProjectId = null;
-    state.selectedTaskId = null;
-    state.selectedTaskIds = [];
-    state.lastTaskClickIndex = null;
+    clearTaskSelection();
     state.statusFilter = "All";
     state.sortBy = "order";
     state.query = "";
     state.scope = "project";
     state.clipboardTasks = [];
+    state.presets = defaultPresetsObject();
+    state.linkedHandle = null;
+    state.linkedFileName = "";
+    state.autoUpdateEnabled = false;
 
     state.data = migrateData(defaultData());
     await saveNow();
+    await savePresets();
 
     buildPortfolioSelect();
     buildScopeSelect();
@@ -2517,9 +2992,6 @@
   el("btnSelectAllTasks").onclick = () => selectAllTasksInProject();
   el("btnMoveUp").onclick = () => moveSelectedTasks(-1);
   el("btnMoveDown").onclick = () => moveSelectedTasks(1);
-
-  // ✅ Presets button
-  el("btnAddPresetTasks").onclick = () => showPresetTaskCreator();
 
   // Search & sort
   el("q").addEventListener("input", (e) => {
@@ -2542,7 +3014,6 @@
       moveSelectedTasks(e.key === "ArrowUp" ? -1 : 1);
       return;
     }
-
     if((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C")){
       if(state.selectedTaskIds.length){
         e.preventDefault();
@@ -2559,7 +3030,119 @@
     }
   });
 
-  // Mobile panel toggles
+  // ---------------- preset modal handlers ----------------
+  el("btnOpenPresets").onclick = () => {
+    if(!state.selectedProjectId){
+      alert("Select a project first.");
+      return;
+    }
+    // default: check items that belong to "Default pipeline" preset
+    const base = state.presets["Default pipeline"] || DEFAULT_TASK_LIST;
+    renderPresetGrid(new Set(base));
+    el("presetName").value = "Default pipeline";
+    el("chkSkipDupTasks").checked = true;
+    openPresetModal();
+  };
+  el("btnClosePreset").onclick = () => closePresetModal();
+  el("presetModal").addEventListener("click", (e) => {
+    if(e.target === el("presetModal")) closePresetModal();
+  });
+
+  el("btnPresetAll").onclick = () => {
+    el("presetGrid").querySelectorAll("input[type=checkbox]").forEach(b=>b.checked=true);
+  };
+  el("btnPresetNone").onclick = () => {
+    el("presetGrid").querySelectorAll("input[type=checkbox]").forEach(b=>b.checked=false);
+  };
+
+  el("btnAddTaskToList").onclick = () => {
+    const nm = prompt("Add task name to master list:");
+    if(!nm) return;
+    // add to Default pipeline by default (so it persists)
+    const key = "Default pipeline";
+    const arr = state.presets[key] || (state.presets[key] = DEFAULT_TASK_LIST.slice());
+    if(!arr.some(x => norm(x) === norm(nm))){
+      arr.push(nm.trim());
+      savePresets();
+    }
+    renderPresetGrid();
+  };
+
+  el("btnRemoveCheckedFromList").onclick = async () => {
+    const checked = new Set(getCheckedPresetItems().map(norm));
+    if(checked.size === 0) return alert("No items checked.");
+    if(!confirm(`Remove ${checked.size} item(s) from the master list?\n\nThis will also remove them from all saved presets.`)) return;
+
+    // remove from all presets
+    for(const k of Object.keys(state.presets)){
+      state.presets[k] = (state.presets[k] || []).filter(x => !checked.has(norm(x)));
+    }
+    await savePresets();
+    renderPresetGrid();
+  };
+
+  el("btnCreateFromChecks").onclick = async () => {
+    const pid = state.selectedProjectId;
+    if(!pid) return alert("Select a project first.");
+    const titles = getCheckedPresetItems();
+    if(titles.length === 0) return alert("Select at least one task.");
+
+    const skip = el("chkSkipDupTasks").checked;
+    const res = await createTasksFromTitles(pid, titles, { skipDuplicates: skip });
+
+    // select first created (if any)
+    const tasks = getCurrentProjectTasksOrdered();
+    state.selectedTaskId = tasks[0]?.id ?? null;
+    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+    state.lastTaskClickIndex = tasks.length ? 0 : null;
+
+    renderAll();
+    alert(`Created: ${res.created}\nSkipped: ${res.skipped}`);
+  };
+
+  el("btnSavePreset").onclick = async () => {
+    const name = String(el("presetName").value || "").trim();
+    if(!name) return alert("Enter a preset name.");
+    const titles = getCheckedPresetItems();
+    if(titles.length === 0) return alert("Select at least one task to save.");
+
+    state.presets[name] = titles.slice();
+    await savePresets();
+    alert(`Saved preset: ${name}`);
+  };
+
+  el("btnLoadPreset").onclick = async () => {
+    const names = Object.keys(state.presets || {});
+    if(names.length === 0) return alert("No presets saved.");
+    const pick = prompt("Preset name to load:\n\n" + names.map(n=>"• "+n).join("\n"), names[0]);
+    if(pick === null) return;
+    const key = names.find(n => norm(n) === norm(pick)) || pick;
+    const preset = state.presets[key];
+    if(!preset) return alert("Preset not found.");
+    el("presetName").value = key;
+    renderPresetGrid(new Set(preset));
+  };
+
+  el("btnDeletePreset").onclick = async () => {
+    const names = Object.keys(state.presets || {});
+    if(names.length === 0) return alert("No presets saved.");
+    const pick = prompt("Preset name to delete:\n\n" + names.map(n=>"• "+n).join("\n"), names[0]);
+    if(pick === null) return;
+    const key = names.find(n => norm(n) === norm(pick));
+    if(!key) return alert("Preset not found.");
+    if(key === "Default pipeline"){
+      if(!confirm("Delete 'Default pipeline' preset? (You can recreate it later.)")) return;
+    } else {
+      if(!confirm(`Delete preset "${key}"?`)) return;
+    }
+    delete state.presets[key];
+    await savePresets();
+    alert("Deleted.");
+    el("presetName").value = "";
+    renderPresetGrid();
+  };
+
+  // ---------------- Mobile panel toggles ----------------
   function showPanel(which){
     const left = el("leftPanel");
     const mid = el("midPanel");
@@ -2578,8 +3161,11 @@
   el("btnShowMid").onclick = () => showPanel("mid");
   el("btnShowRight").onclick = () => showPanel("right");
 
-  // init
+  // ---------------- init ----------------
   (async () => {
+    await loadLinkedSettings();
+    await loadPresets();
+
     state.data = await loadDataFromStorage();
 
     if(!state.data.portfolios.find(p => p.id === state.selectedPortfolioId) && state.selectedPortfolioId !== ALL_PORT_ID){
@@ -2592,6 +3178,9 @@
     if(state.selectedProjectId && !state.data.projects.find(p=>p.id===state.selectedProjectId)){
       state.selectedProjectId = firstVisibleProject()?.id ?? null;
     }
+
+    // optional: auto update from linked file on load
+    await maybeAutoUpdateOnLoad();
 
     const tasks = getCurrentProjectTasksOrdered();
     state.selectedTaskId = tasks[0]?.id ?? null;
@@ -2613,4 +3202,3 @@
 </script>
 </body>
 </html>
-
