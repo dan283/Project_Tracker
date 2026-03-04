@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -712,6 +713,8 @@
               <span style="font-family:var(--mono); color:var(--muted2);" id="taskCount">0</span>
 
               <div class="taskTools">
+                <button class="btn ghost" id="btnAddPresetTasks" type="button" title="Create multiple tasks at once from presets">+ Presets</button>
+
                 <button class="btn ghost" id="btnSelectAllTasks" type="button" title="Select all tasks in this project">Select all</button>
                 <button class="btn ghost" id="btnClearTaskSel" type="button" title="Clear selection">Clear</button>
                 <button class="btn" id="btnCopyTasks" type="button" title="Copy selected tasks">Copy</button>
@@ -777,6 +780,28 @@
   const ALL_PORT_ID = "port_all";
 
   const IMG = { quality: 0.82, maxEdge: 2048, mime: "image/jpeg" };
+
+  // ✅ Preset packs
+  const TASK_PRESETS = {
+    "Full pipeline (AI+3D+Texture+Rig+Render)": [
+      "AI Concept",
+      "ZBrush Sculpt",
+      "AI 3D Model",
+      "Model Cleanup",
+      "Lowres Wrap Mesh",
+      "AI Texture",
+      "UV",
+      "Texture Projection",
+      "Texture Final",
+      "AI Facial Expressions",
+      "AI Pose",
+      "Rig",
+      "Pose",
+      "Facial Expression Sculpt",
+      "Pose cleaning",
+      "Render"
+    ]
+  };
 
   const el = (id) => document.getElementById(id);
 
@@ -969,7 +994,6 @@
     if(!snapshot) return;
 
     saveInFlight = saveInFlight.then(async () => {
-      // No visible debug; just best-effort persistence.
       await idbSet(KEY_DATA, snapshot).catch(()=>{});
       try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot)); }catch(_){}
     });
@@ -1222,6 +1246,120 @@
     renderCards();
   }
 
+  // ---------------- Presets: create multiple tasks ----------------
+  function inferStageFromTitle(title){
+    const t = norm(title);
+    if(t.includes("concept")) return "Concept";
+    if(t.startsWith("ai ") || t.includes(" ai ")) return "AI Model";
+    if(t.includes("zbrush") || t.includes("sculpt") || t.includes("model") || t.includes("cleanup") || t.includes("wrap")) return "3D Model";
+    if(t === "uv" || t.includes(" uv")) return "UV";
+    if(t.includes("texture")) return "Texture";
+    if(t.includes("rig") || t.includes("pose") || t.includes("facial expression")) return "Rig/Pose";
+    if(t.includes("render")) return "Render";
+    return "3D Model";
+  }
+
+  function splitLines(text){
+    return String(text || "")
+      .replace(/\r/g, "")
+      .split("\n")
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  async function createTasksFromList({ projectId, titles, skipDuplicates=true }){
+    if(!projectId) return { created:0, skipped:0 };
+
+    const existing = state.data.tasks
+      .filter(t => t.projectId === projectId)
+      .map(t => norm(t.title));
+
+    const existingSet = new Set(existing);
+
+    const tasks = getCurrentProjectTasksOrdered();
+    let nextOrder = tasks.length;
+
+    let created = 0;
+    let skipped = 0;
+
+    const now = Date.now();
+
+    for(const title of titles){
+      const tNorm = norm(title);
+      if(skipDuplicates && existingSet.has(tNorm)){
+        skipped++;
+        continue;
+      }
+      existingSet.add(tNorm);
+
+      const stage = inferStageFromTitle(title);
+
+      const task = {
+        id: uid("t"),
+        projectId,
+        stage,
+        title: title.trim(),
+        shortDesc: "",
+        status: "Not Started",
+        progress: 0,
+        prevProgress: 0,
+        updatedAt: now,
+        description: "",
+        images: [ placeholderSvg(stage) ],
+        files: [],
+        heroIndex: 0,
+        order: nextOrder++
+      };
+
+      state.data.tasks.push(task);
+      created++;
+    }
+
+    normalizeTaskOrder(state.data);
+    await saveNow();
+    return { created, skipped };
+  }
+
+  async function showPresetTaskCreator(){
+    const pid = state.selectedProjectId;
+    if(!pid) return alert("Select a project first.");
+
+    const names = Object.keys(TASK_PRESETS);
+    const defaultName = names[0] || "Custom";
+    const pack = prompt(
+      `Preset pack name?\n\nAvailable:\n- ${names.join("\n- ")}\n\nType one of the names above, or type "Custom".`,
+      defaultName
+    );
+    if(pack === null) return;
+
+    let list = [];
+    if(TASK_PRESETS[pack]){
+      list = TASK_PRESETS[pack].slice();
+    }else{
+      const txt = prompt(
+        "Paste task titles (one per line):",
+        TASK_PRESETS[defaultName]?.join("\n") || ""
+      );
+      if(txt === null) return;
+      list = splitLines(txt);
+    }
+
+    if(list.length === 0) return alert("No tasks provided.");
+
+    const skipDup = confirm("Skip duplicates (same title) in this project?\nOK = skip duplicates\nCancel = create anyway");
+    const res = await createTasksFromList({ projectId: pid, titles: list, skipDuplicates: skipDup });
+
+    // Select the project’s first task for convenience
+    const ordered = getCurrentProjectTasksOrdered();
+    state.selectedTaskId = ordered[0]?.id ?? null;
+    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
+    state.lastTaskClickIndex = ordered.length ? 0 : null;
+
+    buildStatusFilters();
+    renderAll();
+    alert(`Preset tasks added.\nCreated: ${res.created}\nSkipped: ${res.skipped}`);
+  }
+
   // ---------------- UI & filtering ----------------
   function statusToChipClass(s){
     if(s==="Done") return "done";
@@ -1457,84 +1595,6 @@
     updateTaskPanelButtons();
   }
 
-  // ✅ Merge helpers (works on rename OR category change)
-  function findDuplicateProject(projectId){
-    const proj = state.data.projects.find(p => p.id === projectId);
-    if(!proj) return null;
-
-    const nameN = norm(proj.name);
-    const catN = norm(proj.category);
-
-    if(!nameN || !catN) return null;
-
-    return state.data.projects.find(p =>
-      p.id !== projectId &&
-      norm(p.name) === nameN &&
-      norm(p.category) === catN
-    ) || null;
-  }
-
-  async function mergeProjects(fromId, toId){
-    if(fromId === toId) return;
-
-    let movedCount = 0;
-    for(const t of state.data.tasks){
-      if(t.projectId === fromId){
-        t.projectId = toId;
-        t.updatedAt = Date.now();
-        movedCount++;
-      }
-    }
-
-    state.data.projects = state.data.projects.filter(p => p.id !== fromId);
-    normalizeTaskOrder(state.data);
-
-    state.selectedProjectId = toId;
-
-    const toTasks = state.data.tasks
-      .filter(t => t.projectId === toId)
-      .slice()
-      .sort((a,b)=> (a.order||0)-(b.order||0));
-    state.selectedTaskId = toTasks[0]?.id ?? null;
-    state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
-    state.lastTaskClickIndex = null;
-
-    await saveNow();
-
-    buildPortfolioSelect();
-    buildCategoryFilter();
-    ensureSelectionsAfterFilter();
-    renderAll();
-
-    return movedCount;
-  }
-
-  async function mergeIfDuplicate(projectId){
-    const dup = findDuplicateProject(projectId);
-    if(!dup) return false;
-
-    // Merge current -> existing dup (keep the existing project id)
-    await mergeProjects(projectId, dup.id);
-    return true;
-  }
-
-  async function renameProjectOrMerge(projectId, newName){
-    const proj = state.data.projects.find(p => p.id === projectId);
-    if(!proj) return;
-
-    const newNameNorm = norm(newName);
-    if(!newNameNorm) return;
-
-    // Temporarily set name then run duplicate check
-    proj.name = newName.trim();
-
-    const didMerge = await mergeIfDuplicate(projectId);
-    if(didMerge) return;
-
-    await saveNow();
-    renderAll();
-  }
-
   function beginInlineEdit({ mountEl, initialValue, onSave, onCancel }){
     const input = document.createElement("input");
     input.className = "editInput";
@@ -1608,19 +1668,13 @@
       tagBtn.className = "iconBtn";
       tagBtn.type = "button";
       tagBtn.textContent = "🏷";
-      tagBtn.title = "Set category (merges if same name + category exists)";
+      tagBtn.title = "Set category";
       tagBtn.onclick = async (e) => {
         e.preventDefault(); e.stopPropagation();
         const cur = (p.category || "").trim();
         const next = prompt("Project category (e.g. Dragon):", cur);
         if(next === null) return;
-
         p.category = next.trim();
-
-        // ✅ NEW: category changes can cause duplicates -> merge
-        const didMerge = await mergeIfDuplicate(p.id);
-        if(didMerge) return;
-
         await saveNow();
         buildCategoryFilter();
         ensureSelectionsAfterFilter();
@@ -1631,14 +1685,18 @@
       editBtn.className = "iconBtn";
       editBtn.type = "button";
       editBtn.textContent = "✎";
-      editBtn.title = "Rename project (merges if same name + category exists)";
+      editBtn.title = "Rename project";
       editBtn.onclick = (e) => {
         e.preventDefault(); e.stopPropagation();
         state.selectedProjectId = p.id;
         beginInlineEdit({
           mountEl: nameRow,
           initialValue: p.name,
-          onSave: (val) => renameProjectOrMerge(p.id, val),
+          onSave: async (val) => {
+            p.name = val.trim();
+            await saveNow();
+            renderAll();
+          },
           onCancel: () => renderProjects()
         });
       };
@@ -2257,12 +2315,7 @@
     state.selectedTaskIds = [];
     state.lastTaskClickIndex = null;
 
-    // If created as duplicate (same name+category), auto-merge immediately
-    const didMerge = await mergeIfDuplicate(p.id);
-    if(!didMerge){
-      await saveNow();
-    }
-
+    await saveNow();
     buildCategoryFilter();
     renderAll();
     showPanel("left");
@@ -2466,6 +2519,9 @@
   el("btnMoveUp").onclick = () => moveSelectedTasks(-1);
   el("btnMoveDown").onclick = () => moveSelectedTasks(1);
 
+  // ✅ Presets button
+  el("btnAddPresetTasks").onclick = () => showPresetTaskCreator();
+
   // Search & sort
   el("q").addEventListener("input", (e) => {
     state.query = e.target.value || "";
@@ -2558,3 +2614,4 @@
 </script>
 </body>
 </html>
+
